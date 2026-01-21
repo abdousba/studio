@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX } from 'lucide-react';
 import type { Drug, Service } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -384,7 +384,10 @@ export default function ScanClientPage() {
                       name="expiryDate"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Date d'expiration</FormLabel>
+                           <FormLabel className="flex items-center gap-2">
+                                <CalendarX className="h-5 w-5 text-destructive" />
+                                <span>Date d'expiration</span>
+                            </FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
