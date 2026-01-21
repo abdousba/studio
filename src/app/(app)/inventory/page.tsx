@@ -39,33 +39,41 @@ import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 
-function getStockStatus(drug: Drug): {
+type DrugStatus = {
   label: "En Stock" | "Stock Faible" | "Péremption Proche" | "Expiré";
   variant: "success" | "secondary" | "outline" | "destructive";
   icon: React.ElementType;
-} {
+};
+
+function getStockStatuses(drug: Drug): DrugStatus[] {
+    const statuses: DrugStatus[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    let isExpired = false;
     if (drug.expiryDate && drug.expiryDate !== 'N/A') {
         const expiryDate = new Date(drug.expiryDate);
         if (expiryDate < today) {
-            return { label: "Expiré", variant: "destructive", icon: CalendarX };
+            statuses.push({ label: "Expiré", variant: "destructive", icon: CalendarX });
+            isExpired = true;
         }
         
         const next3Months = new Date();
         next3Months.setMonth(today.getMonth() + 3);
-        if (expiryDate <= next3Months) {
-            return { label: "Péremption Proche", variant: "outline", icon: CalendarClock };
+        if (!isExpired && expiryDate <= next3Months) {
+            statuses.push({ label: "Péremption Proche", variant: "outline", icon: CalendarClock });
         }
     }
 
     if (drug.currentStock < drug.lowStockThreshold) {
-        return { label: "Stock Faible", variant: "secondary", icon: AlertTriangle };
+        statuses.push({ label: "Stock Faible", variant: "secondary", icon: AlertTriangle });
     }
     
-    // Return a function that returns null for the icon when not needed to be a valid component
-    return { label: "En Stock", variant: "success", icon: () => null };
+    if (statuses.length === 0) {
+        statuses.push({ label: "En Stock", variant: "success", icon: () => null });
+    }
+
+    return statuses;
 }
 
 const editDrugSchema = z.object({
@@ -226,10 +234,11 @@ function InventoryPageComponent() {
     const csvRows = [headers.join(',')];
 
     filteredDrugs.forEach(drug => {
-      const status = getStockStatus(drug);
+      const statuses = getStockStatuses(drug);
+      const statusLabels = statuses.map(s => s.label).join(' / ');
       const row = [
         drug.designation,
-        status.label,
+        statusLabels,
         drug.lotNumber,
         drug.initialStock,
         drug.currentStock,
@@ -352,8 +361,8 @@ function InventoryPageComponent() {
                 </TableRow>
                 )}
                 {!isLoading && filteredDrugs?.map((drug) => {
-                const status = getStockStatus(drug);
-                const isExpired = status.label === 'Expiré';
+                const statuses = getStockStatuses(drug);
+                const isExpired = statuses.some(s => s.label === 'Expiré');
                 const isHighlighted = drug.id === highlightedDrugId;
                 return (
                     <TableRow 
@@ -365,16 +374,20 @@ function InventoryPageComponent() {
                     )}
                     >
                     <TableCell>
-                        <Badge variant={status.variant} className={cn(
-                            'flex items-center w-fit',
-                            status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
-                            status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
-                            status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                            status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
-                        )}>
-                            {status.icon && <status.icon className="mr-1 h-3 w-3" />}
-                            {status.label}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                            {statuses.map((status) => (
+                                <Badge key={status.label} variant={status.variant} className={cn(
+                                    'flex items-center',
+                                    status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                    status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                    status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                                )}>
+                                    {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                                    {status.label}
+                                </Badge>
+                            ))}
+                        </div>
                     </TableCell>
                     <TableCell className="font-medium">
                         {drug.designation}
@@ -411,8 +424,8 @@ function InventoryPageComponent() {
                 </div>
             )}
             {!isLoading && filteredDrugs?.map((drug) => {
-                const status = getStockStatus(drug);
-                const isExpired = status.label === 'Expiré';
+                const statuses = getStockStatuses(drug);
+                const isExpired = statuses.some(s => s.label === 'Expiré');
                 const isHighlighted = drug.id === highlightedDrugId;
                 return (
                     <div
@@ -425,16 +438,20 @@ function InventoryPageComponent() {
                         )}
                     >
                         <div className="flex justify-between items-start gap-4">
-                            <Badge variant={status.variant} className={cn(
-                                'flex items-center w-fit',
-                                status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
-                                status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
-                                status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                                status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
-                            )}>
-                                {status.icon && <status.icon className="mr-1 h-3 w-3" />}
-                                {status.label}
-                            </Badge>
+                             <div className="flex flex-wrap gap-1">
+                                {statuses.map((status) => (
+                                    <Badge key={status.label} variant={status.variant} className={cn(
+                                        'flex items-center',
+                                        status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                        status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                        status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                        status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                                    )}>
+                                        {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                                        {status.label}
+                                    </Badge>
+                                ))}
+                            </div>
                             <Button variant="ghost" size="icon" className="-mt-2 -mr-2" onClick={() => setEditingDrug(drug)}>
                                 <Pencil className="h-4 w-4" />
                             </Button>
