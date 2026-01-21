@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarContent,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
@@ -23,6 +24,11 @@ const links = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   return (
     <>
@@ -37,7 +43,7 @@ export function SidebarNav() {
         <SidebarMenu>
           {links.map((link) => (
             <SidebarMenuItem key={link.href}>
-              <Link href={link.href} className="w-full">
+              <Link href={link.href} className="w-full" onClick={handleLinkClick}>
                 <SidebarMenuButton
                   isActive={pathname === link.href}
                   tooltip={link.label}
