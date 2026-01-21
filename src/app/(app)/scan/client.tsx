@@ -640,39 +640,64 @@ export default function ScanClientPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                              <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                  <TableHead>Nom de l'article</TableHead>
-                                  <TableHead className="w-24">Quantité</TableHead>
-                                  <TableHead className="hidden sm:table-cell">Service</TableHead>
-                                  <TableHead className="w-28">Date</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
+                              <div className="hidden sm:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nom de l'article</TableHead>
+                                            <TableHead>Quantité</TableHead>
+                                            <TableHead>Service</TableHead>
+                                            <TableHead>Date</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isLoading ? (
+                                            Array.from({length: 5}).map((_, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell colSpan={4}><Loader2 className="h-4 w-4 animate-spin"/></TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : distributions?.map((dist) => (
+                                        <TableRow key={dist.id}>
+                                            <TableCell>{dist.itemName}</TableCell>
+                                            <TableCell>{dist.quantityDistributed}</TableCell>
+                                            <TableCell>{dist.service}</TableCell>
+                                            <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
+                                        </TableRow>
+                                        ))}
+                                        {!isLoading && distributions?.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                                    Aucune distribution récente.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                              </div>
+                              <div className="space-y-4 sm:hidden">
                                   {isLoading ? (
-                                      Array.from({length: 5}).map((_, i) => (
-                                          <TableRow key={i}>
-                                              <TableCell colSpan={4}><Loader2 className="h-4 w-4 animate-spin"/></TableCell>
-                                          </TableRow>
-                                      ))
+                                      <div className="flex justify-center p-4">
+                                          <Loader2 className="h-6 w-6 animate-spin"/>
+                                      </div>
                                   ) : distributions?.map((dist) => (
-                                  <TableRow key={dist.id}>
-                                      <TableCell>{dist.itemName}</TableCell>
-                                      <TableCell>{dist.quantityDistributed}</TableCell>
-                                      <TableCell className="hidden sm:table-cell">{dist.service}</TableCell>
-                                      <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
-                                  </TableRow>
+                                      <div key={dist.id} className="rounded-lg border bg-card text-card-foreground p-4 text-sm space-y-1">
+                                          <div className="flex justify-between">
+                                              <span className="font-medium">{dist.itemName}</span>
+                                              <span className="font-medium">Qté: {dist.quantityDistributed}</span>
+                                          </div>
+                                          <div className="text-muted-foreground">
+                                              <div>Service: {dist.service}</div>
+                                              <div>Date: {new Date(dist.date).toLocaleDateString()}</div>
+                                          </div>
+                                      </div>
                                   ))}
                                   {!isLoading && distributions?.length === 0 && (
-                                      <TableRow>
-                                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                              Aucune distribution récente.
-                                          </TableCell>
-                                      </TableRow>
+                                      <div className="text-center text-muted-foreground p-4">
+                                          Aucune distribution récente.
+                                      </div>
                                   )}
-                              </TableBody>
-                              </Table>
+                              </div>
                         </CardContent>
                         </Card>
                     </div>
@@ -720,28 +745,47 @@ export default function ScanClientPage() {
                          <CardDescription>Les 5 dernières distributions effectuées.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Médicament</TableHead>
-                                    <TableHead>Lot</TableHead>
-                                    <TableHead className="w-24">Quantité</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead className="w-32 text-right">Date</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {distributions.map((dist) => (
-                                    <TableRow key={dist.id}>
-                                        <TableCell className="font-medium">{dist.itemName}</TableCell>
-                                        <TableCell>{dist.lotNumber ?? 'N/A'}</TableCell>
-                                        <TableCell>{dist.quantityDistributed}</TableCell>
-                                        <TableCell>{dist.service}</TableCell>
-                                        <TableCell className="text-right">{new Date(dist.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Médicament</TableHead>
+                                        <TableHead>Lot</TableHead>
+                                        <TableHead>Quantité</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead className="text-right">Date</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {distributions.map((dist) => (
+                                        <TableRow key={dist.id}>
+                                            <TableCell className="font-medium">{dist.itemName}</TableCell>
+                                            <TableCell>{dist.lotNumber ?? 'N/A'}</TableCell>
+                                            <TableCell>{dist.quantityDistributed}</TableCell>
+                                            <TableCell>{dist.service}</TableCell>
+                                            <TableCell className="text-right">{new Date(dist.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="space-y-4 md:hidden">
+                            {distributions.map((dist) => (
+                                <div key={dist.id} className="rounded-lg border bg-card text-card-foreground p-4 text-sm space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="font-medium">{dist.itemName}</span>
+                                        <span className="font-medium">Qté: {dist.quantityDistributed}</span>
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        <div>Lot: {dist.lotNumber ?? 'N/A'}</div>
+                                        <div>Service: {dist.service}</div>
+                                    </div>
+                                    <div className="text-muted-foreground text-xs pt-1">
+                                        {new Date(dist.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
             )}
