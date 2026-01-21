@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Boxes, Hospital, LayoutDashboard, Truck, Wand2 } from 'lucide-react';
+import { Boxes, Hospital, LayoutDashboard, Settings, Truck, Wand2 } from 'lucide-react';
 import {
   SidebarHeader,
   SidebarMenu,
@@ -18,6 +18,7 @@ const links = [
   { href: '/inventory', label: 'Inventory', icon: Boxes },
   { href: '/distribution', label: 'Distribution', icon: Truck },
   { href: '/adjustments', label: 'Adjustments', icon: Wand2 },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function SidebarNav() {

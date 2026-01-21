@@ -23,6 +23,7 @@ const pageTitles: { [key: string]: string } = {
   "/inventory": "Drug Inventory",
   "/distribution": "Drug Distribution",
   "/adjustments": "Stock Adjustments",
+  "/settings": "Settings",
 }
 
 export function Header() {
