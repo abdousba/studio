@@ -18,6 +18,7 @@ type Mode = 'selection' | 'pch' | 'distribution';
 
 const pchFormSchema = z.object({
   barcode: z.string().min(1, 'Le code-barres est requis.'),
+  designation: z.string().min(1, 'Le nom du médicament est requis.'),
   lotNumber: z.string().min(1, 'Le numéro de lot est requis.'),
   quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
 });
@@ -49,7 +50,7 @@ export default function ScanClientPage({
 
   const pchForm = useForm<PchFormValues>({
     resolver: zodResolver(pchFormSchema),
-    defaultValues: { barcode: '', lotNumber: '', quantity: 1 },
+    defaultValues: { barcode: '', designation: '', lotNumber: '', quantity: 1 },
   });
 
   const distributionForm = useForm<DistributionFormValues>({
@@ -63,6 +64,15 @@ export default function ScanClientPage({
       if (drug) pchForm.clearErrors('barcode');
       return drug;
   }, [pchBarcode, drugs, pchForm]);
+
+  useEffect(() => {
+    if (selectedDrugForPch) {
+      pchForm.setValue('designation', selectedDrugForPch.designation);
+    } else if(pchBarcode) {
+      pchForm.setValue('designation', '');
+    }
+  }, [selectedDrugForPch, pchBarcode, pchForm]);
+
 
   const distributionBarcode = distributionForm.watch('barcode');
   const selectedDrugForDistribution = useMemo(() => {
@@ -160,23 +170,40 @@ export default function ScanClientPage({
   }, [isScanning, activeFormForScan, distributionForm, pchForm, stopScan, toast]);
 
   const handlePchSubmit = (values: PchFormValues) => {
-    if (!selectedDrugForPch) {
-        pchForm.setError('barcode', { message: "Médicament non trouvé dans l'inventaire." });
-        return;
+    const existingDrug = drugs.find(d => d.barcode === values.barcode);
+
+    if (existingDrug) {
+        // Update existing drug
+        setDrugs(prevDrugs => prevDrugs.map(d => 
+            d.barcode === values.barcode 
+                ? { 
+                    ...d, 
+                    currentStock: d.currentStock + values.quantity,
+                    designation: values.designation // Also update designation if changed
+                  }
+                : d
+        ));
+         toast({
+            title: 'Entrée de stock réussie',
+            description: `${values.quantity} unités de ${values.designation} ajoutées au stock.`,
+        });
+    } else {
+        // Add new drug
+        const newDrug: Drug = {
+            barcode: values.barcode,
+            designation: values.designation,
+            currentStock: values.quantity,
+            expiryDate: 'N/A', // Default value, you might want a field for this
+            lowStockThreshold: 10, // Default value
+        };
+        setDrugs(prevDrugs => [...prevDrugs, newDrug]);
+        toast({
+            title: 'Nouveau médicament ajouté',
+            description: `${values.quantity} unités de ${values.designation} ajoutées à l'inventaire.`,
+        });
     }
 
-    setDrugs(prevDrugs => prevDrugs.map(d => 
-        d.barcode === values.barcode 
-            ? { ...d, currentStock: d.currentStock + values.quantity }
-            : d
-    ));
-    
-    toast({
-        title: 'Entrée de stock réussie',
-        description: `${values.quantity} unités de ${selectedDrugForPch.designation} ajoutées au stock.`,
-    });
-
-    pchForm.reset({ barcode: '', lotNumber: '', quantity: 1 });
+    pchForm.reset({ barcode: '', designation: '', lotNumber: '', quantity: 1 });
     setMode('selection');
   };
 
@@ -269,22 +296,24 @@ export default function ScanClientPage({
                   )}
                 />
 
-                <FormItem>
-                  <FormLabel>Nom du médicament</FormLabel>
-                  <FormControl>
-                    <Input
-                      readOnly
-                      disabled
-                      value={selectedDrugForPch?.designation || ''}
-                      placeholder="Le nom du médicament apparaîtra ici"
-                    />
-                  </FormControl>
-                  {selectedDrugForPch && (
-                    <FormDescription>
-                      Stock actuel: {selectedDrugForPch.currentStock}
-                    </FormDescription>
+                <FormField
+                  control={pchForm.control}
+                  name="designation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom du médicament</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Entrez le nom du médicament" {...field} />
+                      </FormControl>
+                       {selectedDrugForPch && (
+                        <FormDescription>
+                          Stock actuel: {selectedDrugForPch.currentStock}
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </FormItem>
+                />
 
                 <FormField
                   control={pchForm.control}
@@ -303,13 +332,11 @@ export default function ScanClientPage({
                 <FormField
                   control={pchForm.control}
                   name="quantity"
-                  render={() => (
+                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-center block">Quantité à ajouter</FormLabel>
+                      <FormLabel>Quantité à ajouter</FormLabel>
                       <FormControl>
-                         <div className="flex justify-center pt-2">
-                              <QuantityInput form={pchForm} fieldName="quantity" />
-                         </div>
+                        <Input type="number" placeholder="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
