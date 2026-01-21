@@ -43,7 +43,7 @@ type PchFormValues = z.infer<typeof pchFormSchema>;
 
 const distributionFormSchema = z.object({
     barcode: z.string().min(1, 'Le code-barres est requis.'),
-    lotNumber: z.string().min(1, 'Le numéro de lot est requis.'),
+    lotId: z.string().min(1, 'Le numéro de lot est requis.'),
     quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
     service: z.string().min(1, 'Le service est requis.'),
 });
@@ -80,7 +80,7 @@ export default function ScanClientPage() {
 
     const distributionForm = useForm<DistributionFormValues>({
         resolver: zodResolver(distributionFormSchema),
-        defaultValues: { barcode: '', lotNumber: '', quantity: 1, service: '' },
+        defaultValues: { barcode: '', lotId: '', quantity: 1, service: '' },
     });
     
     const isLoading = drugsLoading || servicesLoading || isUserLoading || distributionsLoading;
@@ -116,9 +116,9 @@ export default function ScanClientPage() {
 
     useEffect(() => {
         if (scannedDrug) {
-            distributionForm.setValue('lotNumber', scannedDrug.lotNumber || '', { shouldValidate: true });
+            distributionForm.setValue('lotId', scannedDrug.id, { shouldValidate: true });
         } else {
-            distributionForm.setValue('lotNumber', '', { shouldValidate: true });
+            distributionForm.setValue('lotId', '', { shouldValidate: true });
         }
     }, [scannedDrug, distributionForm]);
 
@@ -266,7 +266,7 @@ export default function ScanClientPage() {
     };
 
     const handleDistributionSubmit = async (values: DistributionFormValues) => {
-        const lotToDistribute = availableLots.find(lot => lot.lotNumber === values.lotNumber);
+        const lotToDistribute = availableLots.find(lot => lot.id === values.lotId);
 
         if (!firestore || !user) {
             toast({ variant: 'destructive', title: 'Erreur', description: 'La base de données n\'est pas prête.' });
@@ -274,7 +274,7 @@ export default function ScanClientPage() {
         }
 
         if (!lotToDistribute) {
-          distributionForm.setError('lotNumber', { message: 'Veuillez sélectionner un lot valide.' });
+          distributionForm.setError('lotId', { message: 'Veuillez sélectionner un lot valide.' });
           return;
         }
         
@@ -309,7 +309,7 @@ export default function ScanClientPage() {
                     serviceId: values.service,
                     date: new Date().toISOString(),
                     userId: user.uid,
-                    lotNumber: values.lotNumber,
+                    lotNumber: lotToDistribute.lotNumber,
                 });
             });
 
@@ -318,7 +318,7 @@ export default function ScanClientPage() {
                 description: `${values.quantity} unités de ${lotToDistribute.designation} (Lot: ${lotToDistribute.lotNumber}) distribuées.`,
             });
 
-            distributionForm.reset({ barcode: '', lotNumber: '', quantity: 1, service: '' });
+            distributionForm.reset({ barcode: '', lotId: '', quantity: 1, service: '' });
             setMode('selection');
 
         } catch (error: any) {
@@ -556,7 +556,7 @@ export default function ScanClientPage() {
 
                                     <FormField
                                         control={distributionForm.control}
-                                        name="lotNumber"
+                                        name="lotId"
                                         render={({ field }) => (
                                             <FormItem>
                                             <FormLabel>Numéro de Lot</FormLabel>
@@ -568,7 +568,7 @@ export default function ScanClientPage() {
                                                 </FormControl>
                                                 <SelectContent>
                                                 {availableLots.map((lot) => (
-                                                    <SelectItem key={lot.id} value={lot.lotNumber!}>
+                                                    <SelectItem key={lot.id} value={lot.id}>
                                                     {`${lot.lotNumber} (Stock: ${lot.currentStock}, Exp: ${lot.expiryDate})`}
                                                     </SelectItem>
                                                 ))}
