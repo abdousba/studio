@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX } from 'lucide-react';
+import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX, Truck, Package, ClipboardList, Boxes } from 'lucide-react';
 import type { Drug, Service, Distribution } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -669,6 +669,48 @@ export default function ScanClientPage() {
                     <p className="text-sm text-muted-foreground">Diminuer la quantité et l'assigner à un service.</p>
                 </Card>
             </div>
+             {distributions && distributions.length > 0 && (
+                <Card className="mt-8 w-full max-w-2xl bg-muted">
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <Truck className="h-6 w-6 text-primary" />
+                            <CardTitle>Dernière Distribution Effectuée</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-y-4 gap-x-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="flex items-center gap-3">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Médicament</p>
+                                    <p className="font-semibold">{distributions[0].itemName}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <ClipboardList className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Numéro de Lot</p>
+                                    <p className="font-semibold">{distributions[0].lotNumber ?? 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Boxes className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Quantité</p>
+                                    <p className="font-semibold">{distributions[0].quantityDistributed}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Date</p>
+                                    <p className="font-semibold">{new Date(distributions[0].date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
         </>
     );
