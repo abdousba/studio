@@ -1,20 +1,20 @@
 'use server';
 
 /**
- * @fileOverview An AI agent to suggest stock adjustments based on inventory data.
+ * @fileOverview Un agent IA pour suggérer des ajustements de stock basés sur les données d'inventaire.
  *
- * - suggestStockAdjustment - A function that suggests stock adjustments.
- * - StockAdjustmentInput - The input type for the suggestStockAdjustment function.
- * - StockAdjustmentOutput - The return type for the suggestStockAdjustment function.
+ * - suggestStockAdjustment - Une fonction qui suggère des ajustements de stock.
+ * - StockAdjustmentInput - Le type d'entrée pour la fonction suggestStockAdjustment.
+ * - StockAdjustmentOutput - Le type de retour pour la fonction suggestStockAdjustment.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const StockAdjustmentInputSchema = z.object({
-  drugName: z.string().describe('The name of the drug.'),
-  currentStock: z.number().describe('The current stock level of the drug.'),
-  expiryDate: z.string().describe('The expiry date of the drug (YYYY-MM-DD).'),
+  drugName: z.string().describe('Le nom du médicament.'),
+  currentStock: z.number().describe('Le niveau de stock actuel du médicament.'),
+  expiryDate: z.string().describe("La date d'expiration du médicament (AAAA-MM-JJ)."),
 });
 export type StockAdjustmentInput = z.infer<typeof StockAdjustmentInputSchema>;
 
@@ -22,16 +22,16 @@ const StockAdjustmentOutputSchema = z.object({
   adjustmentSuggestion: z
     .string()
     .describe(
-      'A suggestion for adjusting the stock level, considering the expiry date and current stock.'
+      "Une suggestion pour ajuster le niveau de stock, en tenant compte de la date d'expiration et du stock actuel."
     ),
   suggestedQuantity: z
     .number()
     .optional()
-    .describe('The suggested quantity to adjust the stock by.'),
+    .describe('La quantité suggérée pour ajuster le stock.'),
   reason: z
     .string()
     .optional()
-    .describe('The reason for the suggested adjustment.'),
+    .describe("La raison de l'ajustement suggéré."),
 });
 export type StockAdjustmentOutput = z.infer<typeof StockAdjustmentOutputSchema>;
 
@@ -45,15 +45,15 @@ const prompt = ai.definePrompt({
   name: 'stockAdjustmentPrompt',
   input: {schema: StockAdjustmentInputSchema},
   output: {schema: StockAdjustmentOutputSchema},
-  prompt: `You are an expert pharmacy manager. You will receive information about a drug, including its name, current stock level, and expiry date. Based on this information, you will suggest an adjustment to the stock level to minimize waste and ensure efficient resource allocation.
+  prompt: `Vous êtes un gestionnaire de pharmacie expert. Vous recevrez des informations sur un médicament, y compris son nom, son niveau de stock actuel et sa date d'expiration. Sur la base de ces informations, vous suggérerez un ajustement du niveau de stock pour minimiser le gaspillage et assurer une allocation efficace des ressources.
 
-Drug Name: {{{drugName}}}
-Current Stock: {{{currentStock}}}
-Expiry Date: {{{expiryDate}}}
+Nom du médicament: {{{drugName}}}
+Stock actuel: {{{currentStock}}}
+Date d'expiration: {{{expiryDate}}}
 
-Consider the expiry date and current stock level to determine the optimal adjustment. If the expiry date is near, suggest reducing the stock level. If the stock level is low and the expiry date is far, suggest maintaining the stock level or increasing it if needed. Always provide a reason for your suggestion. Suggest also a quantity to reduce by if applicable. If the expiration date is far and the current stock is appropriate, just suggest maintaining the current stock.
+Tenez compte de la date d'expiration et du niveau de stock actuel pour déterminer l'ajustement optimal. Si la date d'expiration est proche, suggérez de réduire le niveau de stock. Si le niveau de stock est bas et que la date d'expiration est éloignée, suggérez de maintenir le niveau de stock ou de l'augmenter si nécessaire. Fournissez toujours une raison à votre suggestion. Suggérez également une quantité à réduire, le cas échéant. Si la date d'expiration est éloignée et que le stock actuel est approprié, suggérez simplement de maintenir le stock actuel.
 
-Output your reasoning in the 'reason' field, and your suggestion for adjustment in the 'adjustmentSuggestion' field. If you are suggesting a quantity to reduce by, put that in the 'suggestedQuantity' field.
+Inscrivez votre raisonnement dans le champ 'reason', et votre suggestion d'ajustement dans le champ 'adjustmentSuggestion'. Si vous suggérez une quantité à réduire, indiquez-la dans le champ 'suggestedQuantity'.
 `,
 });
 

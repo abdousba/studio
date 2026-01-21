@@ -17,26 +17,26 @@ import {
 import { drugs, type Drug } from "@/lib/data";
 
 function getStockStatus(drug: Drug): {
-  label: "In Stock" | "Low Stock" | "Expired";
+  label: "En Stock" | "Stock Faible" | "Expiré";
   variant: "default" | "destructive" | "secondary";
 } {
   const expiryDate = new Date(drug.expiryDate);
   if (expiryDate < new Date()) {
-    return { label: "Expired", variant: "destructive" };
+    return { label: "Expiré", variant: "destructive" };
   }
   if (drug.currentStock < drug.lowStockThreshold) {
-    return { label: "Low Stock", variant: "secondary" };
+    return { label: "Stock Faible", variant: "secondary" };
   }
-  return { label: "In Stock", variant: "default" };
+  return { label: "En Stock", variant: "default" };
 }
 
 export default function InventoryPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Drug Inventory</CardTitle>
+        <CardTitle>Inventaire des médicaments</CardTitle>
         <CardDescription>
-          A comprehensive list of all drugs currently in the pharmacy.
+          Une liste complète de tous les médicaments actuellement dans la pharmacie.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -44,12 +44,12 @@ export default function InventoryPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="hidden w-[100px] sm:table-cell">
-                Status
+                Statut
               </TableHead>
-              <TableHead>Designation</TableHead>
-              <TableHead>Barcode</TableHead>
-              <TableHead className="hidden md:table-cell">Current Stock</TableHead>
-              <TableHead>Expiry Date</TableHead>
+              <TableHead>Désignation</TableHead>
+              <TableHead>Code-barres</TableHead>
+              <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
+              <TableHead>Date d'expiration</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -41,9 +41,9 @@ import { useToast } from '@/hooks/use-toast';
 import { PackageSearch } from 'lucide-react';
 
 const formSchema = z.object({
-  barcode: z.string().min(1, 'Barcode is required.'),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1.'),
-  service: z.string().min(1, 'Service/Section is required.'),
+  barcode: z.string().min(1, 'Le code-barres est requis.'),
+  quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
+  service: z.string().min(1, 'Le service/section est requis.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,12 +71,12 @@ export default function DistributionPage() {
 
   function onSubmit(values: FormValues) {
     if (!selectedDrug) {
-      form.setError('barcode', { message: 'Invalid barcode. Drug not found.' });
+      form.setError('barcode', { message: 'Code-barres invalide. Médicament non trouvé.' });
       return;
     }
     if (values.quantity > selectedDrug.currentStock) {
       form.setError('quantity', {
-        message: `Not enough stock. Only ${selectedDrug.currentStock} available.`,
+        message: `Stock insuffisant. Seulement ${selectedDrug.currentStock} disponible.`,
       });
       return;
     }
@@ -86,7 +86,7 @@ export default function DistributionPage() {
       barcode: values.barcode,
       itemName: selectedDrug.designation,
       quantityDistributed: values.quantity,
-      service: services.find(s => s.id === values.service)?.name ?? 'Unknown',
+      service: services.find(s => s.id === values.service)?.name ?? 'Inconnu',
       date: new Date().toISOString().split('T')[0],
     };
 
@@ -99,8 +99,8 @@ export default function DistributionPage() {
     }
 
     toast({
-      title: 'Distribution Successful',
-      description: `${values.quantity} units of ${selectedDrug.designation} distributed.`,
+      title: 'Distribution réussie',
+      description: `${values.quantity} unités de ${selectedDrug.designation} distribuées.`,
     });
     form.reset();
     setSelectedDrug(null);
@@ -111,9 +111,9 @@ export default function DistributionPage() {
       <div className="md:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>New Distribution</CardTitle>
+            <CardTitle>Nouvelle Distribution</CardTitle>
             <CardDescription>
-              Scan a barcode and enter the quantity to distribute.
+              Scannez un code-barres et entrez la quantité à distribuer.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -124,9 +124,9 @@ export default function DistributionPage() {
                   name="barcode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Barcode</FormLabel>
+                      <FormLabel>Code-barres</FormLabel>
                       <FormControl>
-                        <Input placeholder="Scan or enter barcode" {...field} />
+                        <Input placeholder="Scannez ou entrez le code-barres" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -138,7 +138,7 @@ export default function DistributionPage() {
                     <PackageSearch className="h-4 w-4" />
                     <div>
                         <span className='font-semibold'>{selectedDrug.designation}</span>
-                        <p>In stock: {selectedDrug.currentStock}</p>
+                        <p>En stock: {selectedDrug.currentStock}</p>
                     </div>
                   </div>
                 )}
@@ -148,7 +148,7 @@ export default function DistributionPage() {
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Quantity</FormLabel>
+                      <FormLabel>Quantité</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
@@ -166,7 +166,7 @@ export default function DistributionPage() {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a service" />
+                            <SelectValue placeholder="Sélectionnez un service" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -182,7 +182,7 @@ export default function DistributionPage() {
                   )}
                 />
 
-                <Button type="submit" className="w-full">Distribute</Button>
+                <Button type="submit" className="w-full">Distribuer</Button>
               </form>
             </Form>
           </CardContent>
@@ -191,17 +191,17 @@ export default function DistributionPage() {
       <div className="md:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Distributions</CardTitle>
+            <CardTitle>Distributions Récentes</CardTitle>
             <CardDescription>
-              A log of the most recent drug distributions.
+              Un journal des distributions de médicaments les plus récentes.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Quantity</TableHead>
+                  <TableHead>Nom de l'article</TableHead>
+                  <TableHead>Quantité</TableHead>
                   <TableHead>Service</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>

@@ -18,8 +18,8 @@ export default function SettingsPage() {
 
     const handleSaveChanges = () => {
         toast({
-            title: "Settings Saved",
-            description: "Your changes have been successfully saved.",
+            title: "Paramètres enregistrés",
+            description: "Vos modifications ont été enregistrées avec succès.",
         });
     };
     
@@ -32,15 +32,15 @@ export default function SettingsPage() {
         setServices([...services, newServiceObj]);
         setNewService('');
         toast({
-            title: "Service Added",
-            description: `"${newService}" has been added.`
+            title: "Service ajouté",
+            description: `"${newService}" a été ajouté.`
         });
     };
 
     const handleRemoveService = (serviceId: string) => {
         setServices(services.filter(s => s.id !== serviceId));
         toast({
-            title: "Service Removed",
+            title: "Service supprimé",
             variant: "destructive",
         });
     }
@@ -49,17 +49,17 @@ export default function SettingsPage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Profile Settings</CardTitle>
-                    <CardDescription>Manage your public profile and account information.</CardDescription>
+                    <CardTitle>Paramètres du profil</CardTitle>
+                    <CardDescription>Gérez votre profil public et les informations de votre compte.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" defaultValue="Dr. Jane Doe" />
+                        <Label htmlFor="name">Nom</Label>
+                        <Input id="name" defaultValue="Dr. Jeanne Dupont" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue="jane.doe@hospital.com" />
+                        <Input id="email" type="email" defaultValue="jeanne.dupont@hopital.com" />
                     </div>
                 </CardContent>
             </Card>
@@ -67,20 +67,20 @@ export default function SettingsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Notifications</CardTitle>
-                    <CardDescription>Configure how you receive notifications.</CardDescription>
+                    <CardDescription>Configurez la manière dont vous recevez les notifications.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div>
-                            <Label htmlFor="low-stock-alerts">Low Stock Alerts</Label>
-                            <p className="text-sm text-muted-foreground">Receive an email when a drug's stock is below the threshold.</p>
+                            <Label htmlFor="low-stock-alerts">Alertes de stock faible</Label>
+                            <p className="text-sm text-muted-foreground">Recevez un e-mail lorsque le stock d'un médicament est inférieur au seuil.</p>
                         </div>
                         <Switch id="low-stock-alerts" defaultChecked />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div>
-                            <Label htmlFor="expiry-alerts">Expiry Alerts</Label>
-                            <p className="text-sm text-muted-foreground">Receive an email for drugs nearing their expiry date.</p>
+                            <Label htmlFor="expiry-alerts">Alertes d'expiration</Label>
+                            <p className="text-sm text-muted-foreground">Recevez un e-mail pour les médicaments approchant de leur date d'expiration.</p>
                         </div>
                         <Switch id="expiry-alerts" />
                     </div>
@@ -89,8 +89,8 @@ export default function SettingsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Services</CardTitle>
-                    <CardDescription>Add or remove hospital services/departments.</CardDescription>
+                    <CardTitle>Gérer les services</CardTitle>
+                    <CardDescription>Ajoutez ou supprimez des services/départements hospitaliers.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -106,17 +106,17 @@ export default function SettingsPage() {
                     <Separator className="my-6" />
                     <div className="flex space-x-2">
                         <Input 
-                            placeholder="New service name" 
+                            placeholder="Nom du nouveau service" 
                             value={newService}
                             onChange={(e) => setNewService(e.target.value)}
                         />
-                        <Button onClick={handleAddService}>Add Service</Button>
+                        <Button onClick={handleAddService}>Ajouter un service</Button>
                     </div>
                 </CardContent>
             </Card>
 
             <div className="flex justify-end">
-                <Button onClick={handleSaveChanges}>Save All Changes</Button>
+                <Button onClick={handleSaveChanges}>Enregistrer toutes les modifications</Button>
             </div>
         </div>
     );

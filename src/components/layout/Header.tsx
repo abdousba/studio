@@ -19,11 +19,11 @@ import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { usePathname } from "next/navigation"
 
 const pageTitles: { [key: string]: string } = {
-  "/dashboard": "Dashboard",
-  "/inventory": "Drug Inventory",
-  "/distribution": "Drug Distribution",
-  "/adjustments": "Stock Adjustments",
-  "/settings": "Settings",
+  "/dashboard": "Tableau de bord",
+  "/inventory": "Inventaire des médicaments",
+  "/distribution": "Distribution de médicaments",
+  "/adjustments": "Ajustements des stocks",
+  "/settings": "Paramètres",
 }
 
 export function Header() {
@@ -33,9 +33,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger />
         <h1 className="text-lg font-semibold md:text-2xl">
-          {pageTitles[pathname] ?? "PharmaTrack"}
+          {pageTitles[pathname] ?? "PharmaSuivi"}
         </h1>
       </div>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
@@ -44,7 +44,7 @@ export function Header() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search drugs..."
+              placeholder="Rechercher des médicaments..."
               className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
             />
           </div>
@@ -71,12 +71,12 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>Paramètres</DropdownMenuItem>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem>Déconnexion</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

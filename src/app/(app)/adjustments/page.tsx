@@ -51,7 +51,7 @@ export default function AdjustmentsPage() {
       });
       setSuggestion(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'An unknown error occurred.');
+      setError(e instanceof Error ? e.message : 'Une erreur inconnue est survenue.');
     } finally {
       setIsLoading(false);
     }
@@ -68,18 +68,18 @@ export default function AdjustmentsPage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>AI Stock Adjustment Suggestions</CardTitle>
+          <CardTitle>Suggestions d'ajustement de stock par IA</CardTitle>
           <CardDescription>
-            Use our GenAI tool to get smart suggestions on stock adjustments based on expiry dates and current levels.
+            Utilisez notre outil GenAI pour obtenir des suggestions intelligentes sur les ajustements de stock en fonction des dates d'expiration et des niveaux actuels.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Designation</TableHead>
-                <TableHead>Current Stock</TableHead>
-                <TableHead>Expiry Date</TableHead>
+                <TableHead>Désignation</TableHead>
+                <TableHead>Stock actuel</TableHead>
+                <TableHead>Date d'expiration</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -92,7 +92,7 @@ export default function AdjustmentsPage() {
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => handleGetSuggestion(drug)}>
                       <Wand2 className="mr-2 h-4 w-4" />
-                      Get Suggestion
+                      Obtenir une suggestion
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -105,21 +105,21 @@ export default function AdjustmentsPage() {
       <Dialog open={!!selectedDrug} onOpenChange={(isOpen) => !isOpen && handleCloseDialog()}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>AI Suggestion for {selectedDrug?.designation}</DialogTitle>
+            <DialogTitle>Suggestion IA pour {selectedDrug?.designation}</DialogTitle>
             <DialogDescription>
-              Based on current stock of {selectedDrug?.currentStock} and expiry date of {selectedDrug?.expiryDate}.
+              Basé sur un stock actuel de {selectedDrug?.currentStock} et une date d'expiration au {selectedDrug?.expiryDate}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {isLoading && (
               <div className="flex items-center justify-center space-x-2">
                 <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-muted-foreground">Analyzing data...</span>
+                <span className="text-muted-foreground">Analyse des données...</span>
               </div>
             )}
             {error && (
               <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
+                <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -132,14 +132,14 @@ export default function AdjustmentsPage() {
                     {suggestion.suggestedQuantity && suggestion.suggestedQuantity > 0 && (
                       <div className="flex items-center gap-2 mt-2">
                           <PackageMinus className="h-4 w-4"/>
-                          <span>Suggested Reduction: <strong>{suggestion.suggestedQuantity} units</strong></span>
+                          <span>Réduction suggérée: <strong>{suggestion.suggestedQuantity} unités</strong></span>
                       </div>
                     )}
                   </AlertDescription>
                 </Alert>
                 <Alert variant="default">
                     <BrainCircuit className="h-4 w-4" />
-                    <AlertTitle>Reasoning</AlertTitle>
+                    <AlertTitle>Raisonnement</AlertTitle>
                     <AlertDescription>
                         {suggestion.reason}
                     </AlertDescription>
@@ -148,7 +148,7 @@ export default function AdjustmentsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={handleCloseDialog}>Close</Button>
+            <Button onClick={handleCloseDialog}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

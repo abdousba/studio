@@ -47,58 +47,58 @@ export default function DashboardPage() {
     <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Drug Types</CardTitle>
+          <CardTitle className="text-sm font-medium">Lots de médicaments au total</CardTitle>
           <Boxes className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{totalDrugs}</div>
           <p className="text-xs text-muted-foreground">
-            Unique medications in inventory
+            Lots de médicaments uniques en inventaire
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+          <CardTitle className="text-sm font-medium">Articles en stock faible</CardTitle>
           <AlertCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{lowStockItems}</div>
           <p className="text-xs text-muted-foreground">
-            Items below their threshold
+            Articles en dessous de leur seuil
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Nearing Expiry</CardTitle>
+          <CardTitle className="text-sm font-medium">Proche de l'expiration</CardTitle>
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{nearingExpiryItems}</div>
           <p className="text-xs text-muted-foreground">
-            Expiring in the next 3 months
+            Expirant dans les 3 prochains mois
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Recent Distributions</CardTitle>
+          <CardTitle className="text-sm font-medium">Distributions récentes</CardTitle>
           <Truck className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">+{recentDistributions}</div>
           <p className="text-xs text-muted-foreground">
-            In the last 7 days
+            Au cours des 7 derniers jours
           </p>
         </CardContent>
       </Card>
 
       <Card className="xl:col-span-4">
         <CardHeader>
-          <CardTitle>Distribution Overview</CardTitle>
+          <CardTitle>Aperçu de la distribution</CardTitle>
           <CardDescription>
-            Total quantity of drugs distributed per service.
+            Quantité totale de médicaments distribués par service.
           </CardDescription>
         </CardHeader>
         <CardContent>
