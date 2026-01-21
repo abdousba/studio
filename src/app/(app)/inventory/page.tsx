@@ -14,7 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { drugs, type Drug } from "@/lib/data";
+import { getDrugs } from "@/lib/google-sheets";
+import type { Drug } from "@/lib/types";
+
 
 function getStockStatus(drug: Drug): {
   label: "En Stock" | "Stock Faible" | "Expiré";
@@ -30,7 +32,9 @@ function getStockStatus(drug: Drug): {
   return { label: "En Stock", variant: "default" };
 }
 
-export default function InventoryPage() {
+export default async function InventoryPage() {
+  const drugs = await getDrugs();
+
   return (
     <Card>
       <CardHeader>
