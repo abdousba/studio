@@ -471,17 +471,19 @@ export default function ScanClientPage() {
                     />
 
                     <FormField
-                    control={pchForm.control}
-                    name="quantity"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Quantité Initiale / À Ajouter</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                      control={pchForm.control}
+                      name="quantity"
+                      render={() => (
+                          <FormItem>
+                          <FormLabel className="text-center block">Quantité Initiale / À Ajouter</FormLabel>
+                          <FormControl>
+                              <div className="flex justify-center pt-2">
+                                  <QuantityInput form={pchForm} fieldName="quantity" />
+                              </div>
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
                     />
 
                     <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
@@ -505,8 +507,8 @@ export default function ScanClientPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Retour à la sélection
                 </Button>
-                <div className="grid gap-8 md:grid-cols-3">
-                    <div className="md:col-span-1">
+                <div className="grid gap-8 lg:grid-cols-3">
+                    <div className="lg:col-span-1">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Distribution aux Services</CardTitle>
@@ -629,7 +631,7 @@ export default function ScanClientPage() {
                             </CardContent>
                         </Card>
                     </div>
-                     <div className="md:col-span-2">
+                     <div className="lg:col-span-2">
                         <Card>
                         <CardHeader>
                             <CardTitle>Distributions Récentes</CardTitle>
@@ -638,39 +640,41 @@ export default function ScanClientPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>Nom de l'article</TableHead>
-                                <TableHead>Quantité</TableHead>
-                                <TableHead>Service</TableHead>
-                                <TableHead>Date</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
-                                    Array.from({length: 5}).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell colSpan={4}><Loader2 className="h-4 w-4 animate-spin"/></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : distributions?.map((dist) => (
-                                <TableRow key={dist.id}>
-                                    <TableCell className="font-medium">{dist.itemName}</TableCell>
-                                    <TableCell>{dist.quantityDistributed}</TableCell>
-                                    <TableCell>{dist.service}</TableCell>
-                                    <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
-                                </TableRow>
-                                ))}
-                                {!isLoading && distributions?.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                            Aucune distribution récente.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                            </Table>
+                            <div className="overflow-x-auto">
+                              <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                  <TableHead>Nom de l'article</TableHead>
+                                  <TableHead>Quantité</TableHead>
+                                  <TableHead>Service</TableHead>
+                                  <TableHead>Date</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {isLoading ? (
+                                      Array.from({length: 5}).map((_, i) => (
+                                          <TableRow key={i}>
+                                              <TableCell colSpan={4}><Loader2 className="h-4 w-4 animate-spin"/></TableCell>
+                                          </TableRow>
+                                      ))
+                                  ) : distributions?.map((dist) => (
+                                  <TableRow key={dist.id}>
+                                      <TableCell className="font-medium">{dist.itemName}</TableCell>
+                                      <TableCell>{dist.quantityDistributed}</TableCell>
+                                      <TableCell>{dist.service}</TableCell>
+                                      <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
+                                  </TableRow>
+                                  ))}
+                                  {!isLoading && distributions?.length === 0 && (
+                                      <TableRow>
+                                          <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                              Aucune distribution récente.
+                                          </TableCell>
+                                      </TableRow>
+                                  )}
+                              </TableBody>
+                              </Table>
+                            </div>
                         </CardContent>
                         </Card>
                     </div>

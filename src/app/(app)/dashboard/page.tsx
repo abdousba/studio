@@ -22,7 +22,7 @@ import Link from 'next/link';
 
 function DashboardSkeleton() {
   return (
-    <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:gap-8 md:grid-cols-2 xl:grid-cols-4">
       <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
       <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
       <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
@@ -104,7 +104,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:gap-8 md:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Lots de médicaments au total</CardTitle>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={{}} className="h-[300px] w-full">
-            <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: -10, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false}/>
               <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-35} textAnchor="end" height={60} />
               <YAxis />

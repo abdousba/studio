@@ -132,13 +132,13 @@ export default function SettingsPage() {
                         ))}
                     </div>
                     <Separator className="my-6" />
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                         <Input 
                             placeholder="Nom du nouveau service" 
                             value={newService}
                             onChange={(e) => setNewService(e.target.value)}
                         />
-                        <Button onClick={handleAddService} disabled={isSubmitting || isUserLoading}>
+                        <Button onClick={handleAddService} disabled={isSubmitting || isUserLoading} className="w-full sm:w-auto">
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Ajouter un service
                         </Button>
