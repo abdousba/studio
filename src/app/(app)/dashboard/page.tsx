@@ -15,7 +15,7 @@ import {
 import { AlertCircle, Boxes, Package, Truck } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Drug, Service, Distribution } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { collection, query } from 'firebase/firestore';
 
@@ -45,18 +45,18 @@ function DashboardSkeleton() {
 
 
 export default function DashboardPage() {
-  const firestore = useFirestore();
+  const { firestore, isUserLoading: isAuthLoading } = useFirebase();
 
-  const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+  const drugsQuery = useMemoFirebase(() => (firestore && !isAuthLoading) ? collection(firestore, 'drugs') : null, [firestore, isAuthLoading]);
   const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
 
-  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+  const servicesQuery = useMemoFirebase(() => (firestore && !isAuthLoading) ? collection(firestore, 'services') : null, [firestore, isAuthLoading]);
   const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
 
-  const distributionsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'distributions') : null, [firestore]);
+  const distributionsQuery = useMemoFirebase(() => (firestore && !isAuthLoading) ? collection(firestore, 'distributions') : null, [firestore, isAuthLoading]);
   const { data: distributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
   
-  const isLoading = drugsLoading || servicesLoading || distributionsLoading;
+  const isLoading = drugsLoading || servicesLoading || distributionsLoading || isAuthLoading;
 
   const totalDrugs = drugs?.length ?? 0;
   const lowStockItems = useMemo(() => drugs?.filter(d => d.currentStock < d.lowStockThreshold).length ?? 0, [drugs]);

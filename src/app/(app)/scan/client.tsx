@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2 } from 'lucide-react';
 import type { Drug, Service } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, updateDoc, collection, addDoc, runTransaction } from 'firebase/firestore';
 
 
@@ -36,13 +36,12 @@ const distributionFormSchema = z.object({
 type DistributionFormValues = z.infer<typeof distributionFormSchema>;
 
 export default function ScanClientPage() {
-    const { firestore } = useFirestore();
-    const { user } = useUser();
+    const { firestore, user, isUserLoading } = useFirebase();
 
-    const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+    const drugsQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'drugs') : null, [firestore, isUserLoading]);
     const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
 
-    const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+    const servicesQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'services') : null, [firestore, isUserLoading]);
     const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
     
     const [mode, setMode] = useState<Mode>('selection');
@@ -385,7 +384,7 @@ export default function ScanClientPage() {
                     )}
                     />
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading}>
+                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading || isUserLoading}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Ajouter au Stock
                     </Button>
@@ -506,7 +505,7 @@ export default function ScanClientPage() {
                     )}
                     />
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading || servicesLoading}>
+                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading || servicesLoading || isUserLoading}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Valider la Distribution
                     </Button>

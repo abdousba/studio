@@ -39,7 +39,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { PackageSearch, Loader2 } from 'lucide-react';
 import type { Drug, Service, Distribution } from '@/lib/types';
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, runTransaction, collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
 
@@ -52,21 +52,20 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function DistributionPage() {
-  const { firestore } = useFirestore();
+  const { firestore, user, isUserLoading } = useFirebase();
   
-  const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+  const drugsQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'drugs') : null, [firestore, isUserLoading]);
   const { data: initialDrugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
   
-  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+  const servicesQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'services') : null, [firestore, isUserLoading]);
   const { data: initialServices, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
 
   const distributionsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || isUserLoading) return null;
     return query(collection(firestore, 'distributions'), orderBy('date', 'desc'), limit(10));
-  }, [firestore]);
+  }, [firestore, isUserLoading]);
   const { data: initialDistributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
   
-  const { user } = useUser();
   const { toast } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,7 +149,7 @@ export default function DistributionPage() {
     }
   }
   
-  const isLoading = drugsLoading || servicesLoading || distributionsLoading;
+  const isLoading = drugsLoading || servicesLoading || distributionsLoading || isUserLoading;
 
   return (
     <div className="grid gap-8 md:grid-cols-3">

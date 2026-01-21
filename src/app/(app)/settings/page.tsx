@@ -10,15 +10,14 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
 import type { Service } from "@/lib/types";
-import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 
 export default function SettingsPage() {
-    const { user } = useUser();
-    const { firestore } = useFirestore();
+    const { user, firestore, isUserLoading } = useFirebase();
     
-    const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+    const servicesQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'services') : null, [firestore, isUserLoading]);
     const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
 
     const { toast } = useToast();
@@ -122,7 +121,7 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {servicesLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+                        {(servicesLoading || isUserLoading) && <Loader2 className="h-5 w-5 animate-spin" />}
                         {services?.map(service => (
                             <div key={service.id} className="flex items-center justify-between">
                                 <span>{service.name}</span>
@@ -139,7 +138,7 @@ export default function SettingsPage() {
                             value={newService}
                             onChange={(e) => setNewService(e.target.value)}
                         />
-                        <Button onClick={handleAddService} disabled={isSubmitting}>
+                        <Button onClick={handleAddService} disabled={isSubmitting || isUserLoading}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Ajouter un service
                         </Button>
