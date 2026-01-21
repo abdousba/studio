@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarX } from "lucide-react";
 import { collection, query, orderBy } from 'firebase/firestore';
+import { cn } from "@/lib/utils";
 
 
 function getStockStatus(drug: Drug): {
@@ -76,6 +77,7 @@ export default function InventoryPage() {
             )}
             {!isLoading && drugs?.map((drug) => {
               const status = getStockStatus(drug);
+              const isExpired = status.label === 'Expiré';
               return (
                 <TableRow key={drug.id}>
                   <TableCell className="hidden sm:table-cell">
@@ -86,7 +88,12 @@ export default function InventoryPage() {
                   </TableCell>
                   <TableCell>{drug.barcode}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
-                  <TableCell>{drug.expiryDate}</TableCell>
+                  <TableCell className={cn(isExpired && "text-destructive")}>
+                    <div className="flex items-center gap-2">
+                        {isExpired && <CalendarX className="h-4 w-4" />}
+                        <span>{drug.expiryDate}</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             })}
