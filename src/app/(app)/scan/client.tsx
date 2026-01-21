@@ -85,6 +85,7 @@ export default function ScanClientPage() {
     
     const isLoading = drugsLoading || servicesLoading || isUserLoading || distributionsLoading;
 
+    // PCH form logic
     const pchBarcode = pchForm.watch('barcode');
     const selectedDrugForPch = useMemo(() => {
         const drug = drugs?.find(d => d.barcode === pchBarcode);
@@ -100,13 +101,31 @@ export default function ScanClientPage() {
         }
     }, [selectedDrugForPch, pchBarcode, pchForm]);
 
-
+    // Distribution form logic
     const distributionBarcode = distributionForm.watch('barcode');
-    const selectedDrugForDistribution = useMemo(() => {
+    const scannedDrug = useMemo(() => {
         const drug = drugs?.find(d => d.barcode === distributionBarcode);
         if (drug) distributionForm.clearErrors('barcode');
         return drug;
     }, [distributionBarcode, drugs, distributionForm]);
+    
+    const availableLots = useMemo(() => {
+        if (!scannedDrug?.designation || !drugs) return [];
+        return drugs.filter(d => d.designation === scannedDrug.designation && d.currentStock > 0);
+    }, [scannedDrug, drugs]);
+
+    useEffect(() => {
+        if (scannedDrug) {
+            distributionForm.setValue('lotNumber', scannedDrug.lotNumber || '', { shouldValidate: true });
+        } else {
+            distributionForm.setValue('lotNumber', '', { shouldValidate: true });
+        }
+    }, [scannedDrug, distributionForm]);
+
+    const totalProductStock = useMemo(() => {
+        if (!scannedDrug) return 0;
+        return availableLots.reduce((sum, lot) => sum + lot.currentStock, 0);
+    }, [scannedDrug, availableLots]);
   
     const startScan = (formType: 'pch' | 'distribution') => {
         // @ts-ignore
@@ -247,13 +266,21 @@ export default function ScanClientPage() {
     };
 
     const handleDistributionSubmit = async (values: DistributionFormValues) => {
-        if (!firestore || !user || !selectedDrugForDistribution) {
-          distributionForm.setError('barcode', { message: 'Code-barres invalide ou base de données non prête.' });
+        const lotToDistribute = availableLots.find(lot => lot.lotNumber === values.lotNumber);
+
+        if (!firestore || !user) {
+            toast({ variant: 'destructive', title: 'Erreur', description: 'La base de données n\'est pas prête.' });
+            return;
+        }
+
+        if (!lotToDistribute) {
+          distributionForm.setError('lotNumber', { message: 'Veuillez sélectionner un lot valide.' });
           return;
         }
-        if (values.quantity > selectedDrugForDistribution.currentStock) {
+        
+        if (values.quantity > lotToDistribute.currentStock) {
           distributionForm.setError('quantity', {
-            message: `Stock insuffisant. Seulement ${selectedDrugForDistribution.currentStock} disponible.`,
+            message: `Stock insuffisant. Seulement ${lotToDistribute.currentStock} disponible pour ce lot.`,
           });
           return;
         }
@@ -262,11 +289,11 @@ export default function ScanClientPage() {
         const selectedService = services?.find(s => s.id === values.service);
 
         try {
-            const drugRef = doc(firestore, 'drugs', selectedDrugForDistribution.id);
+            const drugRef = doc(firestore, 'drugs', lotToDistribute.id);
 
             await runTransaction(firestore, async (transaction) => {
                 const drugDoc = await transaction.get(drugRef);
-                if (!drugDoc.exists()) throw new Error("Le médicament n'existe plus.");
+                if (!drugDoc.exists()) throw new Error("Ce lot de médicament n'existe plus.");
 
                 const newStock = drugDoc.data().currentStock - values.quantity;
                 if (newStock < 0) throw new Error("Stock insuffisant pendant la transaction.");
@@ -275,8 +302,8 @@ export default function ScanClientPage() {
 
                 const distColRef = collection(firestore, 'distributions');
                 transaction.set(doc(distColRef), {
-                    barcode: values.barcode,
-                    itemName: selectedDrugForDistribution.designation,
+                    barcode: lotToDistribute.barcode,
+                    itemName: lotToDistribute.designation,
                     quantityDistributed: values.quantity,
                     service: selectedService?.name ?? 'Inconnu',
                     serviceId: values.service,
@@ -288,7 +315,7 @@ export default function ScanClientPage() {
 
             toast({
                 title: 'Distribution réussie',
-                description: `${values.quantity} unités de ${selectedDrugForDistribution.designation} distribuées.`,
+                description: `${values.quantity} unités de ${lotToDistribute.designation} (Lot: ${lotToDistribute.lotNumber}) distribuées.`,
             });
 
             distributionForm.reset({ barcode: '', lotNumber: '', quantity: 1, service: '' });
@@ -516,29 +543,40 @@ export default function ScanClientPage() {
                                         <Input
                                         readOnly
                                         disabled
-                                        value={selectedDrugForDistribution?.designation || ''}
+                                        value={scannedDrug?.designation || ''}
                                         placeholder="Le nom du médicament apparaîtra ici"
                                         />
                                     </FormControl>
-                                    {selectedDrugForDistribution && (
+                                    {scannedDrug && (
                                         <FormDescription>
-                                        Stock actuel: {selectedDrugForDistribution.currentStock}
+                                        Stock total pour ce produit: {totalProductStock}
                                         </FormDescription>
                                     )}
                                     </FormItem>
 
                                     <FormField
-                                    control={distributionForm.control}
-                                    name="lotNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Numéro de Lot</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Entrez le numéro de lot" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
+                                        control={distributionForm.control}
+                                        name="lotNumber"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Numéro de Lot</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={!scannedDrug || availableLots.length === 0}>
+                                                <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Sélectionnez un lot" />
+                                                </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {availableLots.map((lot) => (
+                                                    <SelectItem key={lot.id} value={lot.lotNumber!}>
+                                                    {`${lot.lotNumber} (Stock: ${lot.currentStock}, Exp: ${lot.expiryDate})`}
+                                                    </SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
 
                                     <FormField
