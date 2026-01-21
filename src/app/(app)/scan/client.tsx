@@ -115,12 +115,12 @@ export default function ScanClientPage() {
     }, [scannedDrug, drugs]);
 
     useEffect(() => {
-        if (scannedDrug) {
+        if (scannedDrug && availableLots.some(l => l.id === scannedDrug.id)) {
             distributionForm.setValue('lotId', scannedDrug.id, { shouldValidate: true });
         } else {
             distributionForm.setValue('lotId', '', { shouldValidate: true });
         }
-    }, [scannedDrug, distributionForm]);
+    }, [scannedDrug, availableLots, distributionForm]);
 
     const totalProductStock = useMemo(() => {
         if (!scannedDrug) return 0;
@@ -644,9 +644,9 @@ export default function ScanClientPage() {
                               <TableHeader>
                                   <TableRow>
                                   <TableHead>Nom de l'article</TableHead>
-                                  <TableHead>Quantité</TableHead>
+                                  <TableHead className="w-24">Quantité</TableHead>
                                   <TableHead className="hidden sm:table-cell">Service</TableHead>
-                                  <TableHead>Date</TableHead>
+                                  <TableHead className="w-28">Date</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -725,9 +725,9 @@ export default function ScanClientPage() {
                                 <TableRow>
                                     <TableHead>Médicament</TableHead>
                                     <TableHead>Lot</TableHead>
-                                    <TableHead>Quantité</TableHead>
+                                    <TableHead className="w-24">Quantité</TableHead>
                                     <TableHead>Service</TableHead>
-                                    <TableHead className="text-right">Date</TableHead>
+                                    <TableHead className="w-32 text-right">Date</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
