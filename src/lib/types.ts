@@ -2,7 +2,7 @@ export type Drug = {
   id: string;
   barcode: string;
   designation: string;
-  initialStock: number;
+  initialStock?: number;
   currentStock: number;
   expiryDate: string;
   lowStockThreshold: number;

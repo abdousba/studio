@@ -97,7 +97,7 @@ export default function InventoryPage() {
                     {drug.designation}
                   </TableCell>
                   <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
-                  <TableCell className="hidden md:table-cell">{drug.initialStock}</TableCell>
+                  <TableCell className="hidden md:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
                   <TableCell className={cn(isExpired && "text-destructive")}>
                     <div className="flex items-center gap-2">
