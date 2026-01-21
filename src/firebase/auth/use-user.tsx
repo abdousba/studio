@@ -23,6 +23,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // --- DEVELOPMENT ONLY: Bypass login ---
+    // This will skip the login page and use a mock user for development.
+    // The original code is commented out below.
+    setUser({
+        uid: 'dev-user-id',
+        email: 'dev@pharmasuivi.app',
+        displayName: 'Utilisateur de dév.',
+        photoURL: 'https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?w=40&h=40&fit=crop',
+    } as User);
+    setIsLoading(false);
+    return;
+    // --- END DEVELOPMENT ONLY ---
+
+    /*
     if (!auth) {
         setIsLoading(false);
         if (pathname !== '/login') {
@@ -64,6 +78,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
+    */
   }, [auth, pathname, router, firestore]);
 
   return (
