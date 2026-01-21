@@ -71,7 +71,7 @@ export default function InventoryPage() {
                 Statut
               </TableHead>
               <TableHead>Désignation</TableHead>
-              <TableHead>Code-barres</TableHead>
+              <TableHead>Lot</TableHead>
               <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
               <TableHead>Date d'expiration</TableHead>
             </TableRow>
@@ -95,7 +95,7 @@ export default function InventoryPage() {
                   <TableCell className="font-medium">
                     {drug.designation}
                   </TableCell>
-                  <TableCell>{drug.barcode}</TableCell>
+                  <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
                   <TableCell className={cn(isExpired && "text-destructive")}>
                     <div className="flex items-center gap-2">

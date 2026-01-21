@@ -212,7 +212,8 @@ export default function ScanClientPage() {
                     transaction.update(drugRef, { 
                         currentStock: newStock,
                         designation: values.designation,
-                        expiryDate: expiryDateString
+                        expiryDate: expiryDateString,
+                        lotNumber: values.lotNumber
                     });
                      toast({
                         title: 'Stock mis à jour',
@@ -225,6 +226,7 @@ export default function ScanClientPage() {
                         currentStock: values.quantity,
                         expiryDate: expiryDateString,
                         lowStockThreshold: 10, // Default value
+                        lotNumber: values.lotNumber,
                     };
                     transaction.set(drugRef, newDrug);
                     toast({

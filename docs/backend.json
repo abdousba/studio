@@ -23,6 +23,10 @@
           "type": "string",
           "description": "The expiration date of the drug.",
           "format": "date-time"
+        },
+        "lotNumber": {
+          "type": "string",
+          "description": "The lot number of the drug batch."
         }
       },
       "required": [
