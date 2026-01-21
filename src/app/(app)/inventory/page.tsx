@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -122,14 +122,78 @@ export default function InventoryPage() {
       }
   };
 
+  const handleExportCSV = () => {
+    if (!drugs) return;
+
+    const headers = [
+      "Désignation",
+      "Statut",
+      "Lot",
+      "Qté. Initiale",
+      "Stock actuel",
+      "Date d'expiration"
+    ];
+    
+    const toCsvRow = (items: (string | number | undefined | null)[]) => {
+      return items.map(item => {
+        const str = String(item ?? 'N/A');
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(',');
+    };
+
+    const csvRows = [headers.join(',')];
+
+    drugs.forEach(drug => {
+      const status = getStockStatus(drug);
+      const row = [
+        drug.designation,
+        status.label,
+        drug.lotNumber,
+        drug.initialStock,
+        drug.currentStock,
+        drug.expiryDate,
+      ];
+      csvRows.push(toCsvRow(row));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `inventaire_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    toast({
+        title: "Exportation réussie",
+        description: "Le fichier CSV de l'inventaire a été téléchargé.",
+    });
+  };
+
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Inventaire des médicaments</CardTitle>
-        <CardDescription>
-          Une liste complète de tous les médicaments actuellement dans la pharmacie.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Inventaire des médicaments</CardTitle>
+            <CardDescription>
+              Une liste complète de tous les médicaments actuellement dans la pharmacie.
+            </CardDescription>
+          </div>
+          <Button onClick={handleExportCSV} disabled={isLoading || !drugs || drugs.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Exporter en CSV
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
