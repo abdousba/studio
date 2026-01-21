@@ -2,10 +2,9 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Bell, Search, User, Menu, LogOut } from "lucide-react"
+import { Bell, User, Menu, LogOut } from "lucide-react"
 import { getAuth, signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { usePathname, useRouter } from "next/navigation"
 import { useUser } from "@/firebase";
+import { Search } from "./Search";
 
 const pageTitles: { [key: string]: string } = {
   "/dashboard": "Tableau de bord",
@@ -49,16 +49,9 @@ export function Header() {
         </h1>
       </div>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <form className="ml-auto flex-1 sm:flex-initial">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Rechercher des médicaments..."
-              className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
-            />
-          </div>
-        </form>
+        <div className="ml-auto flex-1 sm:flex-initial">
+          <Search />
+        </div>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>

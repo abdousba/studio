@@ -21,7 +21,7 @@ import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Dialog,
@@ -88,6 +88,9 @@ function InventoryPageComponent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeFilter = searchParams.get('filter') || 'all';
+  const highlightedDrugId = searchParams.get('highlight');
+  
+  const highlightedRowRef = useRef<HTMLTableRowElement>(null);
 
   const handleFilterChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -130,6 +133,23 @@ function InventoryPageComponent() {
         return drugs;
     }
   }, [drugs, activeFilter]);
+
+
+  useEffect(() => {
+    if (highlightedDrugId && highlightedRowRef.current) {
+        highlightedRowRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+        });
+        // Remove highlight from URL after a short delay to allow scroll to finish
+        const timer = setTimeout(() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('highlight');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }, 3000); // 3 second highlight
+        return () => clearTimeout(timer);
+    }
+  }, [highlightedDrugId, filteredDrugs, pathname, router, searchParams]);
 
 
   const isLoading = drugsAreLoading || isUserLoading;
@@ -287,8 +307,16 @@ function InventoryPageComponent() {
             {!isLoading && filteredDrugs?.map((drug) => {
               const status = getStockStatus(drug);
               const isExpired = status.label === 'Expiré';
+              const isHighlighted = drug.id === highlightedDrugId;
               return (
-                <TableRow key={drug.id} className={cn(isExpired && 'bg-destructive/10')}>
+                <TableRow 
+                  key={drug.id} 
+                  ref={isHighlighted ? highlightedRowRef : null}
+                  className={cn(
+                    isExpired && 'bg-destructive/10',
+                    isHighlighted && 'bg-primary/20 motion-safe:animate-pulse'
+                  )}
+                >
                   <TableCell>
                     <Badge variant={status.variant} className={cn(
                         'flex items-center w-fit',
