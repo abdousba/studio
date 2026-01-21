@@ -23,6 +23,10 @@
           "type": "number",
           "description": "The current quantity of the drug in stock."
         },
+        "lowStockThreshold": {
+            "type": "number",
+            "description": "The threshold below which the stock is considered low."
+        },
         "expiryDate": {
           "type": "string",
           "description": "The expiration date of the drug.",
@@ -37,7 +41,8 @@
         "barcode",
         "designation",
         "currentStock",
-        "expiryDate"
+        "expiryDate",
+        "lowStockThreshold"
       ]
     },
     "Distribution": {

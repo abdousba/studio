@@ -18,6 +18,7 @@ import type { Drug, Service, Distribution } from '@/lib/types';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { collection, query } from 'firebase/firestore';
+import Link from 'next/link';
 
 function DashboardSkeleton() {
   return (
@@ -116,30 +117,34 @@ export default function DashboardPage() {
           </p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Articles en stock faible</CardTitle>
-          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{lowStockItems}</div>
-          <p className="text-xs text-muted-foreground">
-            Articles en dessous de leur seuil
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Proche de l'expiration</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{nearingExpiryItems}</div>
-          <p className="text-xs text-muted-foreground">
-            Expirant dans les 3 prochains mois
-          </p>
-        </CardContent>
-      </Card>
+      <Link href="/inventory?filter=low_stock">
+        <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Articles en stock faible</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{lowStockItems}</div>
+            <p className="text-xs text-muted-foreground">
+              Articles en dessous de leur seuil
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/inventory?filter=nearing_expiry">
+        <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Proche de l'expiration</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{nearingExpiryItems}</div>
+            <p className="text-xs text-muted-foreground">
+              Expirant dans les 3 prochains mois
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Distributions récentes</CardTitle>

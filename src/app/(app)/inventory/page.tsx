@@ -17,9 +17,25 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX } from "lucide-react";
-import { collection, query, orderBy } from 'firebase/firestore';
+import { Loader2, CalendarX, Pencil } from "lucide-react";
+import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 
 function getStockStatus(drug: Drug): {
@@ -45,6 +61,14 @@ function getStockStatus(drug: Drug): {
   return { label: "En Stock", variant: "default" };
 }
 
+const editDrugSchema = z.object({
+  designation: z.string().min(1, "La désignation est requise."),
+  lowStockThreshold: z.coerce.number().min(0, "Le seuil ne peut pas être négatif."),
+});
+
+type EditDrugFormValues = z.infer<typeof editDrugSchema>;
+
+
 export default function InventoryPage() {
   const { firestore, isUserLoading } = useFirebase();
   const drugsQuery = useMemoFirebase(() => {
@@ -54,6 +78,50 @@ export default function InventoryPage() {
   const { data: drugs, isLoading: drugsAreLoading } = useCollection<Drug>(drugsQuery);
 
   const isLoading = drugsAreLoading || isUserLoading;
+
+  const [editingDrug, setEditingDrug] = useState<Drug | null>(null);
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<EditDrugFormValues>({
+      resolver: zodResolver(editDrugSchema),
+  });
+
+  useEffect(() => {
+      if (editingDrug) {
+          form.reset({
+              designation: editingDrug.designation,
+              lowStockThreshold: editingDrug.lowStockThreshold,
+          });
+      }
+  }, [editingDrug, form]);
+
+  const handleUpdateDrug = async (values: EditDrugFormValues) => {
+      if (!firestore || !editingDrug) return;
+      setIsSubmitting(true);
+      const drugRef = doc(firestore, 'drugs', editingDrug.id);
+      try {
+          await updateDoc(drugRef, {
+              designation: values.designation,
+              lowStockThreshold: values.lowStockThreshold,
+          });
+          toast({
+              title: "Médicament mis à jour",
+              description: "Les informations du médicament ont été enregistrées.",
+          });
+          setEditingDrug(null);
+      } catch (error) {
+          console.error("Error updating drug:", error);
+          toast({
+              variant: "destructive",
+              title: "Erreur",
+              description: "Impossible de mettre à jour le médicament.",
+          });
+      } finally {
+          setIsSubmitting(false);
+      }
+  };
+
 
   return (
     <Card>
@@ -75,12 +143,13 @@ export default function InventoryPage() {
               <TableHead className="hidden md:table-cell">Qté. Initiale</TableHead>
               <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
               <TableHead>Date d'expiration</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
@@ -105,12 +174,17 @@ export default function InventoryPage() {
                         <span>{drug.expiryDate}</span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingDrug(drug)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
              {!isLoading && drugs?.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                         Aucun médicament trouvé.
                     </TableCell>
                 </TableRow>
@@ -118,6 +192,55 @@ export default function InventoryPage() {
           </TableBody>
         </Table>
       </CardContent>
+       {editingDrug && (
+          <Dialog open={!!editingDrug} onOpenChange={(isOpen) => !isOpen && setEditingDrug(null)}>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Modifier le médicament</DialogTitle>
+                      <DialogDescription>
+                          Mettez à jour les informations pour {editingDrug.designation}.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                      <form onSubmit={form.handleSubmit(handleUpdateDrug)} className="space-y-4 py-4">
+                          <FormField
+                              control={form.control}
+                              name="designation"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Désignation</FormLabel>
+                                      <FormControl>
+                                          <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name="lowStockThreshold"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Seuil de stock faible</FormLabel>
+                                      <FormControl>
+                                          <Input type="number" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <DialogFooter>
+                              <Button type="button" variant="outline" onClick={() => setEditingDrug(null)}>Annuler</Button>
+                              <Button type="submit" disabled={isSubmitting}>
+                                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Enregistrer
+                              </Button>
+                          </DialogFooter>
+                      </form>
+                  </Form>
+              </DialogContent>
+          </Dialog>
+      )}
     </Card>
   );
 }
