@@ -272,11 +272,19 @@ function InventoryPageComponent() {
           </Button>
         </div>
         <Tabs value={activeFilter} onValueChange={handleFilterChange} className="mt-4">
-          <TabsList>
-            <TabsTrigger value="all">Tout</TabsTrigger>
-            <TabsTrigger value="low_stock">Stock Faible</TabsTrigger>
-            <TabsTrigger value="nearing_expiry">Péremption Proche</TabsTrigger>
-            <TabsTrigger value="expired">Expiré</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 gap-1.5 bg-transparent p-0">
+            <TabsTrigger value="all" className="bg-muted text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+                Tout
+            </TabsTrigger>
+            <TabsTrigger value="low_stock" className="bg-yellow-100 text-yellow-800 data-[state=active]:bg-yellow-200 data-[state=active]:text-yellow-950 data-[state=active]:shadow-sm">
+                Stock Faible
+            </TabsTrigger>
+            <TabsTrigger value="nearing_expiry" className="bg-orange-100 text-orange-800 data-[state=active]:bg-orange-200 data-[state=active]:text-orange-950 data-[state=active]:shadow-sm">
+                Péremption Proche
+            </TabsTrigger>
+            <TabsTrigger value="expired" className="bg-red-100 text-red-800 data-[state=active]:bg-red-200 data-[state=active]:text-red-950 data-[state=active]:shadow-sm">
+                Expiré
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </CardHeader>
@@ -311,16 +319,17 @@ function InventoryPageComponent() {
                   key={drug.id} 
                   ref={isHighlighted ? highlightedRowRef : null}
                   className={cn(
-                    isExpired && 'bg-destructive/10',
+                    isExpired && 'bg-red-50',
                     isHighlighted && 'bg-primary/20 motion-safe:animate-pulse'
                   )}
                 >
                   <TableCell>
                     <Badge variant={status.variant} className={cn(
                         'flex items-center w-fit',
-                        status.variant === 'success' && 'bg-green-100 text-green-800',
-                        status.variant === 'secondary' && 'bg-yellow-100 text-yellow-800',
-                        status.variant === 'outline' && 'text-blue-800 border-blue-300'
+                        status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                        status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                        status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                        status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
                     )}>
                         {status.icon && <status.icon className="mr-1 h-3 w-3" />}
                         {status.label}
@@ -333,7 +342,7 @@ function InventoryPageComponent() {
                   <TableCell className="hidden lg:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
                   <TableCell>{drug.currentStock}</TableCell>
                   <TableCell className="hidden lg:table-cell">{drug.lowStockThreshold}</TableCell>
-                  <TableCell className={cn(isExpired && "text-destructive font-semibold")}>
+                  <TableCell className={cn(isExpired && "text-red-700 font-semibold")}>
                     {drug.expiryDate}
                   </TableCell>
                   <TableCell className="text-right">
