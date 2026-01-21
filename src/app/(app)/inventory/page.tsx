@@ -125,9 +125,13 @@ function InventoryPageComponent() {
       case 'low_stock':
         return drugs.filter(d => d.currentStock < d.lowStockThreshold && !isExpired(d));
       case 'nearing_expiry':
-        return drugs.filter(isNearingExpiry);
+        return drugs
+          .filter(isNearingExpiry)
+          .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
       case 'expired':
-        return drugs.filter(isExpired);
+        return drugs
+          .filter(isExpired)
+          .sort((a, b) => new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime());
       default:
         return drugs;
     }
