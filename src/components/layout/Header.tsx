@@ -14,20 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/firebase";
 import { Search } from "./Search";
 
-const pageTitles: { [key: string]: string } = {
-  "/dashboard": "Tableau de bord",
-  "/inventory": "Inventaire des médicaments",
-  "/scan": "Scanner Produits",
-  "/adjustments": "Ajustements des stocks",
-  "/settings": "Paramètres",
-}
-
 export function Header() {
-  const pathname = usePathname()
   const router = useRouter();
   const { user } = useUser();
 
@@ -44,9 +35,6 @@ export function Header() {
         <SidebarTrigger className="flex">
             <Menu />
         </SidebarTrigger>
-        <h1 className="text-lg font-semibold md:text-2xl">
-          {pageTitles[pathname] ?? "PharmaSuivi"}
-        </h1>
       </div>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <div className="ml-auto flex-1 sm:flex-initial">
