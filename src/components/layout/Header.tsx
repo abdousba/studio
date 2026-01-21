@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Bell, Search, User } from "lucide-react"
+import { Bell, Search, User, Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ const pageTitles: { [key: string]: string } = {
   "/dashboard": "Tableau de bord",
   "/inventory": "Inventaire des médicaments",
   "/distribution": "Distribution de médicaments",
+  "/scan": "Scanner Produits",
   "/adjustments": "Ajustements des stocks",
   "/settings": "Paramètres",
 }
@@ -33,7 +34,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <SidebarTrigger />
+        <SidebarTrigger className="flex">
+            <Menu />
+        </SidebarTrigger>
         <h1 className="text-lg font-semibold md:text-2xl">
           {pageTitles[pathname] ?? "PharmaSuivi"}
         </h1>
