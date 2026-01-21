@@ -658,7 +658,7 @@ export default function ScanClientPage() {
                                       ))
                                   ) : distributions?.map((dist) => (
                                   <TableRow key={dist.id}>
-                                      <TableCell className="font-medium break-words">{dist.itemName}</TableCell>
+                                      <TableCell>{dist.itemName}</TableCell>
                                       <TableCell>{dist.quantityDistributed}</TableCell>
                                       <TableCell className="hidden sm:table-cell">{dist.service}</TableCell>
                                       <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
@@ -719,7 +719,7 @@ export default function ScanClientPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid gap-y-4 gap-x-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="flex flex-col gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-x-2 sm:gap-y-4">
                             <div className="flex items-center gap-3">
                                 <Package className="h-5 w-5 text-muted-foreground" />
                                 <div>

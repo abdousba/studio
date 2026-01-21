@@ -285,7 +285,7 @@ function InventoryPageComponent() {
           <TableHeader>
             <TableRow>
               <TableHead>Statut</TableHead>
-              <TableHead className="min-w-[120px]">Désignation</TableHead>
+              <TableHead>Désignation</TableHead>
               <TableHead className="hidden sm:table-cell">Lot</TableHead>
               <TableHead className="hidden lg:table-cell">Qté. Initiale</TableHead>
               <TableHead>Stock actuel</TableHead>
@@ -326,7 +326,7 @@ function InventoryPageComponent() {
                         {status.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium break-words">
+                  <TableCell className="font-medium">
                     {drug.designation}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">{drug.lotNumber ?? 'N/A'}</TableCell>

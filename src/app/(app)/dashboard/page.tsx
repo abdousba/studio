@@ -167,7 +167,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={{}} className="h-[300px] w-full">
-            <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: -10, bottom: 60 }}>
+            <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false}/>
               <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-35} textAnchor="end" height={60} />
               <YAxis />
