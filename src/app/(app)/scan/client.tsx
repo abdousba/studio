@@ -223,6 +223,7 @@ export default function ScanClientPage() {
                     const newDrug: Omit<Drug, 'id'> = {
                         barcode: values.barcode,
                         designation: values.designation,
+                        initialStock: values.quantity,
                         currentStock: values.quantity,
                         expiryDate: expiryDateString,
                         lowStockThreshold: 10, // Default value
@@ -447,7 +448,7 @@ export default function ScanClientPage() {
                     name="quantity"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Quantité à ajouter</FormLabel>
+                        <FormLabel>Quantité Initiale / À Ajouter</FormLabel>
                         <FormControl>
                             <Input type="number" placeholder="0" {...field} />
                         </FormControl>

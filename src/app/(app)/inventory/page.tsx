@@ -72,6 +72,7 @@ export default function InventoryPage() {
               </TableHead>
               <TableHead>Désignation</TableHead>
               <TableHead>Lot</TableHead>
+              <TableHead className="hidden md:table-cell">Qté. Initiale</TableHead>
               <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
               <TableHead>Date d'expiration</TableHead>
             </TableRow>
@@ -79,7 +80,7 @@ export default function InventoryPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
@@ -96,6 +97,7 @@ export default function InventoryPage() {
                     {drug.designation}
                   </TableCell>
                   <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
+                  <TableCell className="hidden md:table-cell">{drug.initialStock}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
                   <TableCell className={cn(isExpired && "text-destructive")}>
                     <div className="flex items-center gap-2">
@@ -108,7 +110,7 @@ export default function InventoryPage() {
             })}
              {!isLoading && drugs?.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                         Aucun médicament trouvé.
                     </TableCell>
                 </TableRow>

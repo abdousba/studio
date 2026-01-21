@@ -15,6 +15,10 @@
           "type": "string",
           "description": "Name or description of the drug."
         },
+        "initialStock": {
+          "type": "number",
+          "description": "The initial quantity of the drug when first stocked."
+        },
         "currentStock": {
           "type": "number",
           "description": "The current quantity of the drug in stock."
@@ -32,6 +36,7 @@
       "required": [
         "barcode",
         "designation",
+        "initialStock",
         "currentStock",
         "expiryDate"
       ]
