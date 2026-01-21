@@ -15,12 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -39,26 +41,32 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 
 
 function getStockStatus(drug: Drug): {
-  label: "En Stock" | "Stock Faible" | "Expiré";
-  variant: "default" | "destructive" | "secondary";
+  label: "En Stock" | "Stock Faible" | "Péremption Proche" | "Expiré";
+  variant: "success" | "secondary" | "outline" | "destructive";
+  icon: React.ElementType;
 } {
-  if (drug.expiryDate && drug.expiryDate !== 'N/A') {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const parts = drug.expiryDate.split('-').map(p => parseInt(p, 10));
-    const expiryDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    
-    if (expiryDate < today) {
-        return { label: "Expiré", variant: "destructive" };
+    if (drug.expiryDate && drug.expiryDate !== 'N/A') {
+        const expiryDate = new Date(drug.expiryDate);
+        if (expiryDate < today) {
+            return { label: "Expiré", variant: "destructive", icon: CalendarX };
+        }
+        
+        const next3Months = new Date();
+        next3Months.setMonth(today.getMonth() + 3);
+        if (expiryDate <= next3Months) {
+            return { label: "Péremption Proche", variant: "outline", icon: CalendarClock };
+        }
     }
-  }
 
-  if (drug.currentStock < drug.lowStockThreshold) {
-    return { label: "Stock Faible", variant: "secondary" };
-  }
-  
-  return { label: "En Stock", variant: "default" };
+    if (drug.currentStock < drug.lowStockThreshold) {
+        return { label: "Stock Faible", variant: "secondary", icon: AlertTriangle };
+    }
+    
+    // Return a function that returns null for the icon when not needed to be a valid component
+    return { label: "En Stock", variant: "success", icon: () => null };
 }
 
 const editDrugSchema = z.object({
@@ -68,14 +76,61 @@ const editDrugSchema = z.object({
 
 type EditDrugFormValues = z.infer<typeof editDrugSchema>;
 
-
-export default function InventoryPage() {
+function InventoryPageComponent() {
   const { firestore, isUserLoading } = useFirebase();
   const drugsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null;
     return query(collection(firestore, 'drugs'), orderBy('designation', 'asc'));
   }, [firestore, isUserLoading]);
   const { data: drugs, isLoading: drugsAreLoading } = useCollection<Drug>(drugsQuery);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeFilter = searchParams.get('filter') || 'all';
+
+  const handleFilterChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'all') {
+      params.delete('filter');
+    } else {
+      params.set('filter', value);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const filteredDrugs = useMemo(() => {
+    if (!drugs) return [];
+
+    const isExpired = (drug: Drug) => {
+        if (!drug.expiryDate || drug.expiryDate === 'N/A') return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(drug.expiryDate);
+        return expiryDate < today;
+    };
+
+    const isNearingExpiry = (drug: Drug) => {
+        if (!drug.expiryDate || drug.expiryDate === 'N/A' || isExpired(drug)) return false;
+        const today = new Date();
+        const next3Months = new Date();
+        next3Months.setMonth(today.getMonth() + 3);
+        const expiryDate = new Date(drug.expiryDate);
+        return expiryDate >= today && expiryDate <= next3Months;
+    };
+
+    switch (activeFilter) {
+      case 'low_stock':
+        return drugs.filter(d => d.currentStock < d.lowStockThreshold && !isExpired(d));
+      case 'nearing_expiry':
+        return drugs.filter(isNearingExpiry);
+      case 'expired':
+        return drugs.filter(isExpired);
+      default:
+        return drugs;
+    }
+  }, [drugs, activeFilter]);
+
 
   const isLoading = drugsAreLoading || isUserLoading;
 
@@ -123,7 +178,7 @@ export default function InventoryPage() {
   };
 
   const handleExportCSV = () => {
-    if (!drugs) return;
+    if (!filteredDrugs) return;
 
     const headers = [
       "Désignation",
@@ -131,6 +186,7 @@ export default function InventoryPage() {
       "Lot",
       "Qté. Initiale",
       "Stock actuel",
+      "Seuil (Faible)",
       "Date d'expiration"
     ];
     
@@ -146,7 +202,7 @@ export default function InventoryPage() {
 
     const csvRows = [headers.join(',')];
 
-    drugs.forEach(drug => {
+    filteredDrugs.forEach(drug => {
       const status = getStockStatus(drug);
       const row = [
         drug.designation,
@@ -154,6 +210,7 @@ export default function InventoryPage() {
         drug.lotNumber,
         drug.initialStock,
         drug.currentStock,
+        drug.lowStockThreshold,
         drug.expiryDate,
       ];
       csvRows.push(toCsvRow(row));
@@ -165,7 +222,7 @@ export default function InventoryPage() {
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `inventaire_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `inventaire_${activeFilter}_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -174,7 +231,7 @@ export default function InventoryPage() {
     
     toast({
         title: "Exportation réussie",
-        description: "Le fichier CSV de l'inventaire a été téléchargé.",
+        description: `Le fichier CSV de la vue "${activeFilter}" a été téléchargé.`,
     });
   };
 
@@ -182,30 +239,39 @@ export default function InventoryPage() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <CardTitle>Inventaire des médicaments</CardTitle>
             <CardDescription>
               Une liste complète de tous les médicaments actuellement dans la pharmacie.
             </CardDescription>
           </div>
-          <Button onClick={handleExportCSV} disabled={isLoading || !drugs || drugs.length === 0}>
+          <Button onClick={handleExportCSV} disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
             <Download className="mr-2 h-4 w-4" />
-            Exporter en CSV
+            Exporter la vue en CSV
           </Button>
         </div>
+        <Tabs value={activeFilter} onValueChange={handleFilterChange} className="mt-4">
+          <TabsList>
+            <TabsTrigger value="all">Tout</TabsTrigger>
+            <TabsTrigger value="low_stock">Stock Faible</TabsTrigger>
+            <TabsTrigger value="nearing_expiry">Péremption Proche</TabsTrigger>
+            <TabsTrigger value="expired">Expiré</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="hidden w-[100px] sm:table-cell">
+              <TableHead className="w-[180px]">
                 Statut
               </TableHead>
               <TableHead>Désignation</TableHead>
               <TableHead>Lot</TableHead>
               <TableHead className="hidden md:table-cell">Qté. Initiale</TableHead>
               <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
+              <TableHead className="hidden lg:table-cell">Seuil (Faible)</TableHead>
               <TableHead>Date d'expiration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -213,18 +279,26 @@ export default function InventoryPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             )}
-            {!isLoading && drugs?.map((drug) => {
+            {!isLoading && filteredDrugs?.map((drug) => {
               const status = getStockStatus(drug);
               const isExpired = status.label === 'Expiré';
               return (
-                <TableRow key={drug.id}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant={status.variant} className={status.variant === 'default' ? 'bg-green-100 text-green-800' : ''}>{status.label}</Badge>
+                <TableRow key={drug.id} className={cn(isExpired && 'bg-destructive/10')}>
+                  <TableCell>
+                    <Badge variant={status.variant} className={cn(
+                        'flex items-center w-fit',
+                        status.variant === 'success' && 'bg-green-100 text-green-800',
+                        status.variant === 'secondary' && 'bg-yellow-100 text-yellow-800',
+                        status.variant === 'outline' && 'text-blue-800 border-blue-300'
+                    )}>
+                        {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                        {status.label}
+                    </Badge>
                   </TableCell>
                   <TableCell className="font-medium">
                     {drug.designation}
@@ -232,11 +306,9 @@ export default function InventoryPage() {
                   <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
                   <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
-                  <TableCell className={cn(isExpired && "text-destructive")}>
-                    <div className="flex items-center gap-2">
-                        {isExpired && <CalendarX className="h-4 w-4" />}
-                        <span>{drug.expiryDate}</span>
-                    </div>
+                  <TableCell className="hidden lg:table-cell">{drug.lowStockThreshold}</TableCell>
+                  <TableCell className={cn(isExpired && "text-destructive font-semibold")}>
+                    {drug.expiryDate}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setEditingDrug(drug)}>
@@ -246,10 +318,10 @@ export default function InventoryPage() {
                 </TableRow>
               );
             })}
-             {!isLoading && drugs?.length === 0 && (
+             {!isLoading && filteredDrugs?.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        Aucun médicament trouvé.
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+                        Aucun médicament ne correspond à ce filtre.
                     </TableCell>
                 </TableRow>
             )}
@@ -307,4 +379,14 @@ export default function InventoryPage() {
       )}
     </Card>
   );
+}
+
+
+// Add a Suspense boundary as useSearchParams is used.
+export default function InventoryPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
+            <InventoryPageComponent />
+        </Suspense>
+    );
 }
