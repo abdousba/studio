@@ -1,3 +1,4 @@
+'use client';
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -14,8 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getDrugs } from "@/lib/google-sheets";
 import type { Drug } from "@/lib/types";
+import { useCollection } from "@/firebase";
+import { Loader2 } from "lucide-react";
 
 
 function getStockStatus(drug: Drug): {
@@ -23,7 +25,7 @@ function getStockStatus(drug: Drug): {
   variant: "default" | "destructive" | "secondary";
 } {
   const expiryDate = new Date(drug.expiryDate);
-  if (expiryDate < new Date()) {
+  if (drug.expiryDate !== 'N/A' && expiryDate < new Date()) {
     return { label: "Expiré", variant: "destructive" };
   }
   if (drug.currentStock < drug.lowStockThreshold) {
@@ -32,8 +34,8 @@ function getStockStatus(drug: Drug): {
   return { label: "En Stock", variant: "default" };
 }
 
-export default async function InventoryPage() {
-  const drugs = await getDrugs();
+export default function InventoryPage() {
+  const { data: drugs, isLoading } = useCollection<Drug>('drugs', { orderBy: ['designation', 'asc'] });
 
   return (
     <Card>
@@ -57,10 +59,17 @@ export default async function InventoryPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {drugs.map((drug) => {
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && drugs?.map((drug) => {
               const status = getStockStatus(drug);
               return (
-                <TableRow key={drug.barcode}>
+                <TableRow key={drug.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant={status.variant} className={status.variant === 'default' ? 'bg-green-100 text-green-800' : ''}>{status.label}</Badge>
                   </TableCell>
@@ -73,6 +82,13 @@ export default async function InventoryPage() {
                 </TableRow>
               );
             })}
+             {!isLoading && drugs?.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        Aucun médicament trouvé.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>

@@ -1,4 +1,5 @@
 export type Drug = {
+  id: string;
   barcode: string;
   designation: string;
   currentStock: number;
@@ -17,5 +18,8 @@ export type Distribution = {
   itemName: string;
   quantityDistributed: number;
   service: string;
+  serviceId: string;
   date: string;
+  userId: string;
+  lotNumber?: string;
 };

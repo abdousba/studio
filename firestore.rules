@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users can manage their own profile
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Authenticated users can read and write drugs, services, and distributions.
+    // In a real production app, you would want more granular rules.
+    // For example, only certain roles can add/edit drugs.
+    match /drugs/{drugId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /services/{serviceId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /distributions/{distributionId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

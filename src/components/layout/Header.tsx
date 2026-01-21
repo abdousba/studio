@@ -2,8 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Bell, Search, User, Menu } from "lucide-react"
-
+import { Bell, Search, User, Menu, LogOut } from "lucide-react"
+import { getAuth, signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -15,8 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useUser } from "@/firebase";
 
 const pageTitles: { [key: string]: string } = {
   "/dashboard": "Tableau de bord",
@@ -29,7 +29,15 @@ const pageTitles: { [key: string]: string } = {
 
 export function Header() {
   const pathname = usePathname()
-  const avatar = PlaceHolderImages.find((img) => img.id === "user-avatar")
+  const router = useRouter();
+  const { user } = useUser();
+
+  const handleLogout = async () => {
+    const auth = getAuth();
+    await signOut(auth);
+    router.push('/login');
+  }
+
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
@@ -59,14 +67,13 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
-              {avatar ? (
+              {user?.photoURL ? (
                  <Image
-                    src={avatar.imageUrl}
-                    alt={avatar.description}
+                    src={user.photoURL}
+                    alt={user.displayName || 'User avatar'}
                     width={40}
                     height={40}
                     className="rounded-full"
-                    data-ai-hint={avatar.imageHint}
                   />
               ) : <User className="h-5 w-5" /> }
              
@@ -74,12 +81,17 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.displayName || 'Mon Compte'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Paramètres</DropdownMenuItem>
+            <Link href="/settings">
+              <DropdownMenuItem>Paramètres</DropdownMenuItem>
+            </Link>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Déconnexion</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4"/>
+              <span>Déconnexion</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
