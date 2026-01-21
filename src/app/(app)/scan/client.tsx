@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX, Truck, Package, ClipboardList, Boxes } from 'lucide-react';
+import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX, Truck } from 'lucide-react';
 import type { Drug, Service, Distribution } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -60,7 +60,7 @@ export default function ScanClientPage() {
 
     const distributionsQuery = useMemoFirebase(() => {
         if (!firestore || isUserLoading) return null;
-        return query(collection(firestore, 'distributions'), orderBy('date', 'desc'), limit(10));
+        return query(collection(firestore, 'distributions'), orderBy('date', 'desc'), limit(5));
     }, [firestore, isUserLoading]);
     const { data: distributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
     
@@ -636,7 +636,7 @@ export default function ScanClientPage() {
                         <CardHeader>
                             <CardTitle>Distributions Récentes</CardTitle>
                             <CardDescription>
-                            Un journal des 10 distributions de médicaments les plus récentes.
+                            Un journal des 5 distributions de médicaments les plus récentes.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -711,44 +711,37 @@ export default function ScanClientPage() {
                 </Card>
             </div>
              {distributions && distributions.length > 0 && (
-                <Card className="mt-8 w-full max-w-2xl bg-muted">
+                <Card className="mt-8 w-full max-w-4xl">
                     <CardHeader>
                         <div className="flex items-center gap-3">
                             <Truck className="h-6 w-6 text-primary" />
-                            <CardTitle>Dernière Distribution Effectuée</CardTitle>
+                            <CardTitle>Dernières Distributions</CardTitle>
                         </div>
+                         <CardDescription>Les 5 dernières distributions effectuées.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-x-2 sm:gap-y-4">
-                            <div className="flex items-center gap-3">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Médicament</p>
-                                    <p className="font-semibold">{distributions[0].itemName}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Numéro de Lot</p>
-                                    <p className="font-semibold">{distributions[0].lotNumber ?? 'N/A'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Boxes className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Quantité</p>
-                                    <p className="font-semibold">{distributions[0].quantityDistributed}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Date</p>
-                                    <p className="font-semibold">{new Date(distributions[0].date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                                </div>
-                            </div>
-                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Médicament</TableHead>
+                                    <TableHead>Lot</TableHead>
+                                    <TableHead>Quantité</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead className="text-right">Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {distributions.map((dist) => (
+                                    <TableRow key={dist.id}>
+                                        <TableCell className="font-medium">{dist.itemName}</TableCell>
+                                        <TableCell>{dist.lotNumber ?? 'N/A'}</TableCell>
+                                        <TableCell>{dist.quantityDistributed}</TableCell>
+                                        <TableCell>{dist.service}</TableCell>
+                                        <TableCell className="text-right">{new Date(dist.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             )}
