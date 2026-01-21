@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,8 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Barcode, Camera, Hospital, Plus, Minus, ArrowLeft } from 'lucide-react';
+import { Barcode, Camera, Hospital, Plus, Minus, ArrowLeft, X } from 'lucide-react';
 import type { Drug, Service } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 type Mode = 'selection' | 'pch' | 'distribution';
 
@@ -40,6 +41,12 @@ export default function ScanClientPage({
   const [drugs, setDrugs] = useState<Drug[]>(initialDrugs);
   const { toast } = useToast();
 
+  const [isScanning, setIsScanning] = useState(false);
+  const [activeFormForScan, setActiveFormForScan] = useState<'pch' | 'distribution' | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const scannerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const pchForm = useForm<PchFormValues>({
     resolver: zodResolver(pchFormSchema),
     defaultValues: { barcode: '', lotNumber: '', quantity: 1 },
@@ -63,6 +70,96 @@ export default function ScanClientPage({
       if (drug) distributionForm.clearErrors('barcode');
       return drug;
   }, [distributionBarcode, drugs, distributionForm]);
+  
+  const startScan = (formType: 'pch' | 'distribution') => {
+    setActiveFormForScan(formType);
+    setIsScanning(true);
+  };
+
+  const stopScan = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    if (scannerIntervalRef.current) {
+        clearInterval(scannerIntervalRef.current);
+        scannerIntervalRef.current = null;
+    }
+    setIsScanning(false);
+    setActiveFormForScan(null);
+  };
+
+  useEffect(() => {
+    if (!isScanning) return;
+
+    // @ts-ignore
+    if (!('BarcodeDetector' in window) || typeof window.BarcodeDetector.getSupportedFormats !== 'function') {
+      toast({
+        variant: 'destructive',
+        title: 'Non supporté',
+        description: "La détection de codes-barres n'est pas supportée par votre navigateur.",
+      });
+      stopScan();
+      return;
+    }
+
+    const startCamera = async () => {
+      try {
+        // @ts-ignore
+        const barcodeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'code_128', 'qr_code', 'upc_a'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+
+          scannerIntervalRef.current = setInterval(async () => {
+            if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
+            try {
+              const barcodes = await barcodeDetector.detect(videoRef.current);
+              if (barcodes.length > 0) {
+                const barcodeValue = barcodes[0].rawValue;
+                
+                if (activeFormForScan === 'pch') {
+                    pchForm.setValue('barcode', barcodeValue, { shouldValidate: true });
+                } else if (activeFormForScan === 'distribution') {
+                    distributionForm.setValue('barcode', barcodeValue, { shouldValidate: true });
+                }
+                
+                audioRef.current?.play();
+                toast({ title: "Code-barres scanné!", description: `Code: ${barcodeValue}` });
+                stopScan();
+              }
+            } catch (error) {
+              // This can happen if the video frame is not ready. Ignore it.
+            }
+          }, 300);
+        }
+      } catch (err) {
+        console.error('Camera access error:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Erreur Caméra',
+          description: "Impossible d'accéder à la caméra. Veuillez vérifier les autorisations.",
+        });
+        stopScan();
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (scannerIntervalRef.current) {
+        clearInterval(scannerIntervalRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScanning]);
+
 
   const handlePchSubmit = (values: PchFormValues) => {
     if (!selectedDrugForPch) {
@@ -70,8 +167,6 @@ export default function ScanClientPage({
         return;
     }
 
-    // NOTE: This only updates the state in the browser.
-    // It does not write back to the Google Sheet.
     setDrugs(prevDrugs => prevDrugs.map(d => 
         d.barcode === values.barcode 
             ? { ...d, currentStock: d.currentStock + values.quantity }
@@ -99,8 +194,6 @@ export default function ScanClientPage({
       return;
     }
 
-    // NOTE: This only updates the state in the browser.
-    // It does not write back to the Google Sheet.
     setDrugs(prevDrugs => prevDrugs.map(d => 
         d.barcode === values.barcode 
             ? { ...d, currentStock: d.currentStock - values.quantity }
@@ -128,6 +221,18 @@ export default function ScanClientPage({
     </div>
   );
 
+  const renderScanner = () => (
+     <div className={cn("fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90", isScanning ? "flex" : "hidden")}>
+      <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-white hover:text-white" onClick={stopScan}>
+        <X className="h-8 w-8" />
+      </Button>
+      <div className="relative w-full max-w-lg aspect-[4/3] overflow-hidden rounded-lg">
+        <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+        <div className="absolute inset-0 border-4 border-red-500/50 m-8 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
+      </div>
+      <p className="mt-4 text-white">Veuillez aligner le code-barres dans le cadre.</p>
+    </div>
+  )
 
   if (mode === 'pch') {
     return (
@@ -153,7 +258,10 @@ export default function ScanClientPage({
                     <FormControl>
                       <div className="relative">
                         <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10" {...field} />
+                        <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10 pr-12" {...field} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => startScan('pch')}>
+                            <Camera className="h-5 w-5" />
+                        </Button>
                       </div>
                     </FormControl>
                     {selectedDrugForPch && (
@@ -226,9 +334,12 @@ export default function ScanClientPage({
                   <FormItem>
                     <FormLabel>Code-barres</FormLabel>
                     <FormControl>
-                      <div className="relative">
+                       <div className="relative">
                         <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10" {...field} />
+                        <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10 pr-12" {...field} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => startScan('distribution')}>
+                            <Camera className="h-5 w-5" />
+                        </Button>
                       </div>
                     </FormControl>
                      {selectedDrugForDistribution && (
@@ -291,30 +402,34 @@ export default function ScanClientPage({
   }
 
   return (
-    <div className="flex w-full flex-col items-center justify-center p-4">
-        <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold">Scanner un produit</h1>
-            <p className="text-muted-foreground">Choisissez une action à effectuer.</p>
-        </div>
-        <div className="grid w-full max-w-2xl grid-cols-1 gap-8 md:grid-cols-2">
-            <Card 
-                className="flex cursor-pointer flex-col items-center justify-center p-8 text-center transition-colors hover:bg-muted"
-                onClick={() => setMode('pch')}
-            >
-                <Barcode className="h-20 w-20 text-foreground" />
-                <Camera className="mb-2 mt-4 h-10 w-10 text-muted-foreground" />
-                <p className="text-lg font-semibold text-foreground">PCH</p>
-            </Card>
+    <>
+      {renderScanner()}
+      <audio ref={audioRef} src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto" />
+      <div className="flex w-full flex-col items-center justify-center p-4">
+          <div className="mb-8 text-center">
+              <h1 className="text-3xl font-bold">Scanner un produit</h1>
+              <p className="text-muted-foreground">Choisissez une action à effectuer.</p>
+          </div>
+          <div className="grid w-full max-w-2xl grid-cols-1 gap-8 md:grid-cols-2">
+              <Card 
+                  className="flex cursor-pointer flex-col items-center justify-center p-8 text-center transition-colors hover:bg-muted"
+                  onClick={() => setMode('pch')}
+              >
+                  <Barcode className="h-20 w-20 text-foreground" />
+                  <Camera className="mb-2 mt-4 h-10 w-10 text-muted-foreground" />
+                  <p className="text-lg font-semibold text-foreground">PCH</p>
+              </Card>
 
-            <Card 
-                className="flex cursor-pointer flex-col items-center justify-center p-8 text-center transition-colors hover:bg-muted"
-                onClick={() => setMode('distribution')}
-            >
-                <Hospital className="h-20 w-20 text-foreground" />
-                <Camera className="mb-2 mt-4 h-10 w-10 text-muted-foreground" />
-                <p className="text-lg font-semibold text-foreground">Distribution</p>
-            </Card>
-        </div>
-    </div>
+              <Card 
+                  className="flex cursor-pointer flex-col items-center justify-center p-8 text-center transition-colors hover:bg-muted"
+                  onClick={() => setMode('distribution')}
+              >
+                  <Hospital className="h-20 w-20 text-foreground" />
+                  <Camera className="mb-2 mt-4 h-10 w-10 text-muted-foreground" />
+                  <p className="text-lg font-semibold text-foreground">Distribution</p>
+              </Card>
+          </div>
+      </div>
+    </>
   );
 }
