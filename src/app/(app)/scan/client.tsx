@@ -640,13 +640,12 @@ export default function ScanClientPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
                               <Table>
                               <TableHeader>
                                   <TableRow>
                                   <TableHead>Nom de l'article</TableHead>
                                   <TableHead>Quantité</TableHead>
-                                  <TableHead>Service</TableHead>
+                                  <TableHead className="hidden sm:table-cell">Service</TableHead>
                                   <TableHead>Date</TableHead>
                                   </TableRow>
                               </TableHeader>
@@ -659,9 +658,9 @@ export default function ScanClientPage() {
                                       ))
                                   ) : distributions?.map((dist) => (
                                   <TableRow key={dist.id}>
-                                      <TableCell className="font-medium">{dist.itemName}</TableCell>
+                                      <TableCell className="font-medium break-words">{dist.itemName}</TableCell>
                                       <TableCell>{dist.quantityDistributed}</TableCell>
-                                      <TableCell>{dist.service}</TableCell>
+                                      <TableCell className="hidden sm:table-cell">{dist.service}</TableCell>
                                       <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
                                   </TableRow>
                                   ))}
@@ -674,7 +673,6 @@ export default function ScanClientPage() {
                                   )}
                               </TableBody>
                               </Table>
-                            </div>
                         </CardContent>
                         </Card>
                     </div>

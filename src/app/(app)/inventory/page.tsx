@@ -284,13 +284,11 @@ function InventoryPageComponent() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[180px]">
-                Statut
-              </TableHead>
-              <TableHead>Désignation</TableHead>
-              <TableHead>Lot</TableHead>
-              <TableHead className="hidden md:table-cell">Qté. Initiale</TableHead>
-              <TableHead className="hidden md:table-cell">Stock actuel</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead className="min-w-[120px]">Désignation</TableHead>
+              <TableHead className="hidden sm:table-cell">Lot</TableHead>
+              <TableHead className="hidden lg:table-cell">Qté. Initiale</TableHead>
+              <TableHead>Stock actuel</TableHead>
               <TableHead className="hidden lg:table-cell">Seuil (Faible)</TableHead>
               <TableHead>Date d'expiration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -328,12 +326,12 @@ function InventoryPageComponent() {
                         {status.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium break-words">
                     {drug.designation}
                   </TableCell>
-                  <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
-                  <TableCell className="hidden md:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
-                  <TableCell className="hidden md:table-cell">{drug.currentStock}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{drug.lotNumber ?? 'N/A'}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
+                  <TableCell>{drug.currentStock}</TableCell>
                   <TableCell className="hidden lg:table-cell">{drug.lowStockThreshold}</TableCell>
                   <TableCell className={cn(isExpired && "text-destructive font-semibold")}>
                     {drug.expiryDate}
