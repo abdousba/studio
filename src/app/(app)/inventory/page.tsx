@@ -89,7 +89,7 @@ function InventoryPageComponent() {
   const activeFilter = searchParams.get('filter') || 'all';
   const highlightedDrugId = searchParams.get('highlight');
   
-  const highlightedRowRef = useRef<HTMLTableRowElement>(null);
+  const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement>(null);
 
   const handleFilterChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -326,79 +326,141 @@ function InventoryPageComponent() {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Statut</TableHead>
-              <TableHead>Désignation</TableHead>
-              <TableHead className="hidden sm:table-cell">Lot</TableHead>
-              <TableHead className="hidden lg:table-cell">Qté. Initiale</TableHead>
-              <TableHead>Stock actuel</TableHead>
-              <TableHead className="hidden lg:table-cell">Seuil (Faible)</TableHead>
-              <TableHead>Date d'expiration</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center">
-                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            )}
-            {!isLoading && filteredDrugs?.map((drug) => {
-              const status = getStockStatus(drug);
-              const isExpired = status.label === 'Expiré';
-              const isHighlighted = drug.id === highlightedDrugId;
-              return (
-                <TableRow 
-                  key={drug.id} 
-                  ref={isHighlighted ? highlightedRowRef : null}
-                  className={cn(
-                    isExpired && 'bg-red-50',
-                    isHighlighted && 'bg-primary/20 motion-safe:animate-pulse'
-                  )}
-                >
-                  <TableCell>
-                    <Badge variant={status.variant} className={cn(
-                        'flex items-center w-fit',
-                        status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
-                        status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
-                        status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                        status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
-                    )}>
-                        {status.icon && <status.icon className="mr-1 h-3 w-3" />}
-                        {status.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {drug.designation}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">{drug.lotNumber ?? 'N/A'}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{drug.initialStock ?? 'N/A'}</TableCell>
-                  <TableCell>{drug.currentStock}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{drug.lowStockThreshold}</TableCell>
-                  <TableCell className={cn(isExpired && "text-red-700 font-semibold")}>
-                    {drug.expiryDate}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => setEditingDrug(drug)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-             {!isLoading && filteredDrugs?.length === 0 && (
+        {/* Desktop view */}
+        <div className="hidden sm:block">
+            <Table>
+            <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
-                        Aucun médicament ne correspond à ce filtre.
+                <TableHead>Statut</TableHead>
+                <TableHead>Désignation</TableHead>
+                <TableHead>Lot</TableHead>
+                <TableHead>Stock actuel</TableHead>
+                <TableHead>Date d'expiration</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {isLoading && (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                     </TableCell>
                 </TableRow>
+                )}
+                {!isLoading && filteredDrugs?.map((drug) => {
+                const status = getStockStatus(drug);
+                const isExpired = status.label === 'Expiré';
+                const isHighlighted = drug.id === highlightedDrugId;
+                return (
+                    <TableRow 
+                    key={drug.id} 
+                    ref={isHighlighted ? highlightedRowRef as React.Ref<HTMLTableRowElement> : null}
+                    className={cn(
+                        isExpired && 'bg-red-50',
+                        isHighlighted && 'bg-primary/20 motion-safe:animate-pulse'
+                    )}
+                    >
+                    <TableCell>
+                        <Badge variant={status.variant} className={cn(
+                            'flex items-center w-fit',
+                            status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                            status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                            status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                            status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                        )}>
+                            {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                            {status.label}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                        {drug.designation}
+                    </TableCell>
+                    <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
+                    <TableCell>{drug.currentStock}</TableCell>
+                    <TableCell className={cn(isExpired && "text-red-700 font-semibold")}>
+                        {drug.expiryDate}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingDrug(drug)}>
+                        <Pencil className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                );
+                })}
+                {!isLoading && filteredDrugs?.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                            Aucun médicament ne correspond à ce filtre.
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+            </Table>
+        </div>
+
+        {/* Mobile view */}
+        <div className="space-y-4 sm:hidden">
+            {isLoading && (
+                <div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
             )}
-          </TableBody>
-        </Table>
+            {!isLoading && filteredDrugs?.map((drug) => {
+                const status = getStockStatus(drug);
+                const isExpired = status.label === 'Expiré';
+                const isHighlighted = drug.id === highlightedDrugId;
+                return (
+                    <div
+                        key={drug.id}
+                        ref={isHighlighted ? highlightedRowRef as React.Ref<HTMLDivElement> : null}
+                        className={cn(
+                            'rounded-lg border p-4 space-y-3',
+                            isExpired && 'bg-red-50/80',
+                            isHighlighted && 'bg-primary/20 motion-safe:animate-pulse ring-2 ring-primary'
+                        )}
+                    >
+                        <div className="flex justify-between items-start gap-4">
+                            <Badge variant={status.variant} className={cn(
+                                'flex items-center w-fit',
+                                status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                            )}>
+                                {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                                {status.label}
+                            </Badge>
+                            <Button variant="ghost" size="icon" className="-mt-2 -mr-2" onClick={() => setEditingDrug(drug)}>
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        <div>
+                            <p className="font-medium">{drug.designation}</p>
+                            <p className="text-sm text-muted-foreground">Lot: {drug.lotNumber ?? 'N/A'}</p>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
+                            <span className="text-muted-foreground">Stock Actuel</span>
+                            <span className="font-medium">{drug.currentStock}</span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Date d'expiration</span>
+                            <span className={cn('font-medium', isExpired && "text-red-700")}>
+                            {drug.expiryDate}
+                            </span>
+                        </div>
+                    </div>
+                );
+            })}
+            {!isLoading && filteredDrugs?.length === 0 && (
+                <div className="text-center text-muted-foreground py-10">
+                    Aucun médicament ne correspond à ce filtre.
+                </div>
+            )}
+        </div>
       </CardContent>
        {editingDrug && (
           <Dialog open={!!editingDrug} onOpenChange={(isOpen) => !isOpen && setEditingDrug(null)}>
