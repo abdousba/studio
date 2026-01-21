@@ -10,14 +10,17 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
 import type { Service } from "@/lib/types";
-import { useCollection, useFirestore, useUser } from "@/firebase";
+import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
 
 
 export default function SettingsPage() {
-    const { data: services, isLoading: servicesLoading } = useCollection<Service>('services');
     const { user } = useUser();
     const { firestore } = useFirestore();
+    
+    const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+    const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
+
     const { toast } = useToast();
     
     const [newService, setNewService] = useState('');

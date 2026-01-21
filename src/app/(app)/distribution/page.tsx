@@ -39,8 +39,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { PackageSearch, Loader2 } from 'lucide-react';
 import type { Drug, Service, Distribution } from '@/lib/types';
-import { useCollection, useUser, useFirestore } from '@/firebase';
-import { doc, runTransaction, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, runTransaction, collection, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -52,11 +52,20 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function DistributionPage() {
-  const { data: initialDrugs, isLoading: drugsLoading } = useCollection<Drug>('drugs');
-  const { data: initialServices, isLoading: servicesLoading } = useCollection<Service>('services');
-  const { data: initialDistributions, isLoading: distributionsLoading } = useCollection<Distribution>('distributions', { orderBy: ['date', 'desc'], limit: 10 });
-  
   const { firestore } = useFirestore();
+  
+  const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+  const { data: initialDrugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
+  
+  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+  const { data: initialServices, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
+
+  const distributionsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'distributions'), orderBy('date', 'desc'), limit(10));
+  }, [firestore]);
+  const { data: initialDistributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
+  
   const { user } = useUser();
   const { toast } = useToast();
 

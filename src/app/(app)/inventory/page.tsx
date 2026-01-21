@@ -16,8 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
-import { useCollection } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { Loader2 } from "lucide-react";
+import { collection, query, orderBy } from 'firebase/firestore';
 
 
 function getStockStatus(drug: Drug): {
@@ -35,7 +36,12 @@ function getStockStatus(drug: Drug): {
 }
 
 export default function InventoryPage() {
-  const { data: drugs, isLoading } = useCollection<Drug>('drugs', { orderBy: ['designation', 'asc'] });
+  const firestore = useFirestore();
+  const drugsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'drugs'), orderBy('designation', 'asc'));
+  }, [firestore]);
+  const { data: drugs, isLoading } = useCollection<Drug>(drugsQuery);
 
   return (
     <Card>

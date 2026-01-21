@@ -15,8 +15,9 @@ import {
 import { AlertCircle, Boxes, Package, Truck } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Drug, Service, Distribution } from '@/lib/types';
-import { useCollection } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { collection, query } from 'firebase/firestore';
 
 function DashboardSkeleton() {
   return (
@@ -44,9 +45,16 @@ function DashboardSkeleton() {
 
 
 export default function DashboardPage() {
-  const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>('drugs');
-  const { data: services, isLoading: servicesLoading } = useCollection<Service>('services');
-  const { data: distributions, isLoading: distributionsLoading } = useCollection<Distribution>('distributions');
+  const firestore = useFirestore();
+
+  const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+  const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
+
+  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+  const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
+
+  const distributionsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'distributions') : null, [firestore]);
+  const { data: distributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
   
   const isLoading = drugsLoading || servicesLoading || distributionsLoading;
 

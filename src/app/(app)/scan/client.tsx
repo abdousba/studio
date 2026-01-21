@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2 } from 'lucide-react';
 import type { Drug, Service } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useCollection, useFirestore, useUser } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, updateDoc, collection, addDoc, runTransaction } from 'firebase/firestore';
 
 
@@ -36,10 +36,14 @@ const distributionFormSchema = z.object({
 type DistributionFormValues = z.infer<typeof distributionFormSchema>;
 
 export default function ScanClientPage() {
-    const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>('drugs');
-    const { data: services, isLoading: servicesLoading } = useCollection<Service>('services');
     const { firestore } = useFirestore();
     const { user } = useUser();
+
+    const drugsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'drugs') : null, [firestore]);
+    const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
+
+    const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+    const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
     
     const [mode, setMode] = useState<Mode>('selection');
     const { toast } = useToast();
