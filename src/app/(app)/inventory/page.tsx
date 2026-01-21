@@ -15,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock } from "lucide-react";
@@ -271,22 +270,60 @@ function InventoryPageComponent() {
             Exporter la vue en CSV
           </Button>
         </div>
-        <Tabs value={activeFilter} onValueChange={handleFilterChange} className="mt-4">
-          <TabsList className="grid w-full grid-cols-4 gap-1.5 bg-transparent p-0">
-            <TabsTrigger value="all" className="bg-muted text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+            <Button
+                onClick={() => handleFilterChange('all')}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                    'transition-colors rounded-md',
+                    activeFilter === 'all'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+            >
                 Tout
-            </TabsTrigger>
-            <TabsTrigger value="low_stock" className="bg-yellow-100 text-yellow-800 data-[state=active]:bg-yellow-200 data-[state=active]:text-yellow-950 data-[state=active]:shadow-sm">
+            </Button>
+            <Button
+                onClick={() => handleFilterChange('low_stock')}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                    'transition-colors rounded-md',
+                    activeFilter === 'low_stock'
+                    ? 'bg-yellow-200 text-yellow-950 shadow-sm hover:bg-yellow-200/80'
+                    : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80'
+                )}
+            >
                 Stock Faible
-            </TabsTrigger>
-            <TabsTrigger value="nearing_expiry" className="bg-orange-100 text-orange-800 data-[state=active]:bg-orange-200 data-[state=active]:text-orange-950 data-[state=active]:shadow-sm">
+            </Button>
+            <Button
+                onClick={() => handleFilterChange('nearing_expiry')}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                    'transition-colors rounded-md',
+                    activeFilter === 'nearing_expiry'
+                    ? 'bg-orange-200 text-orange-950 shadow-sm hover:bg-orange-200/80'
+                    : 'bg-orange-100 text-orange-800 hover:bg-orange-100/80'
+                )}
+            >
                 Péremption Proche
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="bg-red-100 text-red-800 data-[state=active]:bg-red-200 data-[state=active]:text-red-950 data-[state=active]:shadow-sm">
+            </Button>
+            <Button
+                onClick={() => handleFilterChange('expired')}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                    'transition-colors rounded-md',
+                    activeFilter === 'expired'
+                    ? 'bg-red-200 text-red-950 shadow-sm hover:bg-red-200/80'
+                    : 'bg-red-100 text-red-800 hover:bg-red-100/80'
+                )}
+            >
                 Expiré
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+            </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
