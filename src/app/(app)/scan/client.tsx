@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ type PchFormValues = z.infer<typeof pchFormSchema>;
 
 const distributionFormSchema = z.object({
     barcode: z.string().min(1, 'Le code-barres est requis.'),
+    lotNumber: z.string().min(1, 'Le numéro de lot est requis.'),
     quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
     service: z.string().min(1, 'Le service est requis.'),
 });
@@ -54,7 +55,7 @@ export default function ScanClientPage({
 
   const distributionForm = useForm<DistributionFormValues>({
       resolver: zodResolver(distributionFormSchema),
-      defaultValues: { barcode: '', quantity: 1, service: '' },
+      defaultValues: { barcode: '', lotNumber: '', quantity: 1, service: '' },
   });
 
   const pchBarcode = pchForm.watch('barcode');
@@ -221,7 +222,7 @@ export default function ScanClientPage({
       description: `${values.quantity} unités de ${selectedDrugForDistribution.designation} distribuées.`,
     });
 
-    distributionForm.reset({ barcode: '', quantity: 1, service: '' });
+    distributionForm.reset({ barcode: '', lotNumber: '', quantity: 1, service: '' });
     setMode('selection');
   };
 
@@ -280,15 +281,27 @@ export default function ScanClientPage({
                         </Button>
                       </div>
                     </FormControl>
-                    {selectedDrugForPch && (
-                        <p className='text-sm text-muted-foreground pt-1'>
-                            Médicament: <span className='font-bold text-foreground'>{selectedDrugForPch.designation}</span> (Stock: {selectedDrugForPch.currentStock})
-                        </p>
-                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <FormItem>
+                <FormLabel>Nom du médicament</FormLabel>
+                <FormControl>
+                  <Input
+                    readOnly
+                    disabled
+                    value={selectedDrugForPch?.designation || ''}
+                    placeholder="Le nom du médicament apparaîtra ici"
+                  />
+                </FormControl>
+                {selectedDrugForPch && (
+                  <FormDescription>
+                    Stock actuel: {selectedDrugForPch.currentStock}
+                  </FormDescription>
+                )}
+              </FormItem>
 
               <FormField
                 control={pchForm.control}
@@ -358,13 +371,39 @@ export default function ScanClientPage({
                         </Button>
                       </div>
                     </FormControl>
-                     {selectedDrugForDistribution && (
-                        <p className='text-sm text-muted-foreground pt-1'>
-                            Médicament: <span className='font-bold text-foreground'>{selectedDrugForDistribution.designation}</span> (Stock: {selectedDrugForDistribution.currentStock})
-                        </p>
-                    )}
                     <FormMessage />
                   </FormItem>
+                )}
+              />
+
+              <FormItem>
+                <FormLabel>Nom du médicament</FormLabel>
+                <FormControl>
+                  <Input
+                    readOnly
+                    disabled
+                    value={selectedDrugForDistribution?.designation || ''}
+                    placeholder="Le nom du médicament apparaîtra ici"
+                  />
+                </FormControl>
+                {selectedDrugForDistribution && (
+                  <FormDescription>
+                    Stock actuel: {selectedDrugForDistribution.currentStock}
+                  </FormDescription>
+                )}
+              </FormItem>
+
+              <FormField
+                control={distributionForm.control}
+                name="lotNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Numéro de Lot</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Entrez le numéro de lot" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
                 )}
               />
 
