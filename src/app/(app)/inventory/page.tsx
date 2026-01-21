@@ -26,13 +26,22 @@ function getStockStatus(drug: Drug): {
   label: "En Stock" | "Stock Faible" | "Expiré";
   variant: "default" | "destructive" | "secondary";
 } {
-  const expiryDate = new Date(drug.expiryDate);
-  if (drug.expiryDate !== 'N/A' && expiryDate < new Date()) {
-    return { label: "Expiré", variant: "destructive" };
+  if (drug.expiryDate && drug.expiryDate !== 'N/A') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const parts = drug.expiryDate.split('-').map(p => parseInt(p, 10));
+    const expiryDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    
+    if (expiryDate < today) {
+        return { label: "Expiré", variant: "destructive" };
+    }
   }
+
   if (drug.currentStock < drug.lowStockThreshold) {
     return { label: "Stock Faible", variant: "secondary" };
   }
+  
   return { label: "En Stock", variant: "default" };
 }
 
