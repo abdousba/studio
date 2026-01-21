@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Boxes, Hospital, LayoutDashboard, Settings, Truck, Wand2, ScanLine } from 'lucide-react';
+import { Boxes, Hospital, LayoutDashboard, Settings, Wand2, ScanLine } from 'lucide-react';
 import {
   SidebarHeader,
   SidebarMenu,
@@ -17,7 +17,6 @@ import { Separator } from '@/components/ui/separator';
 const links = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/inventory', label: 'Inventaire', icon: Boxes },
-  { href: '/distribution', label: 'Distribution', icon: Truck },
   { href: '/scan', label: 'Scanner Produits', icon: ScanLine },
   { href: '/adjustments', label: 'Ajustements', icon: Wand2 },
   { href: '/settings', label: 'Paramètres', icon: Settings },

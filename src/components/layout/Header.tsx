@@ -21,7 +21,6 @@ import { useUser } from "@/firebase";
 const pageTitles: { [key: string]: string } = {
   "/dashboard": "Tableau de bord",
   "/inventory": "Inventaire des médicaments",
-  "/distribution": "Distribution de médicaments",
   "/scan": "Scanner Produits",
   "/adjustments": "Ajustements des stocks",
   "/settings": "Paramètres",

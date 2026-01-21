@@ -12,12 +12,20 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX } from 'lucide-react';
-import type { Drug, Service } from '@/lib/types';
+import type { Drug, Service, Distribution } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, collection, addDoc, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, addDoc, runTransaction, query, orderBy, limit } from 'firebase/firestore';
 
 
 type Mode = 'selection' | 'pch' | 'distribution';
@@ -49,6 +57,12 @@ export default function ScanClientPage() {
 
     const servicesQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'services') : null, [firestore, isUserLoading]);
     const { data: services, isLoading: servicesLoading } = useCollection<Service>(servicesQuery);
+
+    const distributionsQuery = useMemoFirebase(() => {
+        if (!firestore || isUserLoading) return null;
+        return query(collection(firestore, 'distributions'), orderBy('date', 'desc'), limit(10));
+    }, [firestore, isUserLoading]);
+    const { data: distributions, isLoading: distributionsLoading } = useCollection<Distribution>(distributionsQuery);
     
     const [mode, setMode] = useState<Mode>('selection');
     const { toast } = useToast();
@@ -68,6 +82,8 @@ export default function ScanClientPage() {
         resolver: zodResolver(distributionFormSchema),
         defaultValues: { barcode: '', lotNumber: '', quantity: 1, service: '' },
     });
+    
+    const isLoading = drugsLoading || servicesLoading || isUserLoading || distributionsLoading;
 
     const pchBarcode = pchForm.watch('barcode');
     const selectedDrugForPch = useMemo(() => {
@@ -438,7 +454,7 @@ export default function ScanClientPage() {
                     )}
                     />
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading || isUserLoading}>
+                    <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Ajouter au Stock
                     </Button>
@@ -454,119 +470,171 @@ export default function ScanClientPage() {
         return (
         <>
             {renderScanner()}
-            <Card className="max-w-lg mx-auto relative">
-            <CardHeader>
-                <Button variant="ghost" size="icon" className="absolute left-2 top-2" onClick={() => setMode('selection')}>
-                    <ArrowLeft className="h-4 w-4" />
+             <div className="space-y-4">
+                <Button variant="ghost" onClick={() => setMode('selection')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Retour à la sélection
                 </Button>
-                <CardTitle className="text-center pt-8">Distribution aux Services</CardTitle>
-                <CardDescription className="text-center">
-                Diminuer la quantité en stock d'un médicament.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...distributionForm}>
-                <form onSubmit={distributionForm.handleSubmit(handleDistributionSubmit)} className="space-y-6">
-                    <FormField
-                    control={distributionForm.control}
-                    name="barcode"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Code-barres</FormLabel>
-                        <FormControl>
-                            <div className="relative">
-                            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10 pr-12" {...field} />
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => startScan('distribution')}>
-                                <Camera className="h-5 w-5" />
-                            </Button>
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                <div className="grid gap-8 md:grid-cols-3">
+                    <div className="md:col-span-1">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Distribution aux Services</CardTitle>
+                                <CardDescription>
+                                Diminuer la quantité en stock d'un médicament.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Form {...distributionForm}>
+                                <form onSubmit={distributionForm.handleSubmit(handleDistributionSubmit)} className="space-y-6">
+                                    <FormField
+                                    control={distributionForm.control}
+                                    name="barcode"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Code-barres</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                            <Input autoFocus placeholder="Scannez ou entrez le code-barres" className="pl-10 pr-12" {...field} />
+                                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => startScan('distribution')}>
+                                                <Camera className="h-5 w-5" />
+                                            </Button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
 
-                    <FormItem>
-                    <FormLabel>Nom du médicament</FormLabel>
-                    <FormControl>
-                        <Input
-                        readOnly
-                        disabled
-                        value={selectedDrugForDistribution?.designation || ''}
-                        placeholder="Le nom du médicament apparaîtra ici"
-                        />
-                    </FormControl>
-                    {selectedDrugForDistribution && (
-                        <FormDescription>
-                        Stock actuel: {selectedDrugForDistribution.currentStock}
-                        </FormDescription>
-                    )}
-                    </FormItem>
+                                    <FormItem>
+                                    <FormLabel>Nom du médicament</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                        readOnly
+                                        disabled
+                                        value={selectedDrugForDistribution?.designation || ''}
+                                        placeholder="Le nom du médicament apparaîtra ici"
+                                        />
+                                    </FormControl>
+                                    {selectedDrugForDistribution && (
+                                        <FormDescription>
+                                        Stock actuel: {selectedDrugForDistribution.currentStock}
+                                        </FormDescription>
+                                    )}
+                                    </FormItem>
 
-                    <FormField
-                    control={distributionForm.control}
-                    name="lotNumber"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Numéro de Lot</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Entrez le numéro de lot" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                                    <FormField
+                                    control={distributionForm.control}
+                                    name="lotNumber"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Numéro de Lot</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Entrez le numéro de lot" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
 
-                    <FormField
-                    control={distributionForm.control}
-                    name="service"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Service/Section</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={servicesLoading}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez un service de destination" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {services?.map((service) => (
-                                <SelectItem key={service.id} value={service.id}>
-                                {service.name}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                                    <FormField
+                                    control={distributionForm.control}
+                                    name="service"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Service/Section</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={servicesLoading}>
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Sélectionnez un service de destination" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {services?.map((service) => (
+                                                <SelectItem key={service.id} value={service.id}>
+                                                {service.name}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
 
-                    <FormField
-                    control={distributionForm.control}
-                    name="quantity"
-                    render={() => (
-                        <FormItem>
-                        <FormLabel className="text-center block">Quantité à distribuer</FormLabel>
-                        <FormControl>
-                            <div className="flex justify-center pt-2">
-                                <QuantityInput form={distributionForm} fieldName="quantity" />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                                    <FormField
+                                    control={distributionForm.control}
+                                    name="quantity"
+                                    render={() => (
+                                        <FormItem>
+                                        <FormLabel className="text-center block">Quantité à distribuer</FormLabel>
+                                        <FormControl>
+                                            <div className="flex justify-center pt-2">
+                                                <QuantityInput form={distributionForm} fieldName="quantity" />
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting || drugsLoading || servicesLoading || isUserLoading}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Valider la Distribution
-                    </Button>
-                </form>
-                </Form>
-            </CardContent>
-            </Card>
+                                    <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Valider la Distribution
+                                    </Button>
+                                </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                     <div className="md:col-span-2">
+                        <Card>
+                        <CardHeader>
+                            <CardTitle>Distributions Récentes</CardTitle>
+                            <CardDescription>
+                            Un journal des 10 distributions de médicaments les plus récentes.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead>Nom de l'article</TableHead>
+                                <TableHead>Quantité</TableHead>
+                                <TableHead>Service</TableHead>
+                                <TableHead>Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    Array.from({length: 5}).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell colSpan={4}><Loader2 className="h-4 w-4 animate-spin"/></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : distributions?.map((dist) => (
+                                <TableRow key={dist.id}>
+                                    <TableCell className="font-medium">{dist.itemName}</TableCell>
+                                    <TableCell>{dist.quantityDistributed}</TableCell>
+                                    <TableCell>{dist.service}</TableCell>
+                                    <TableCell>{new Date(dist.date).toLocaleDateString()}</TableCell>
+                                </TableRow>
+                                ))}
+                                {!isLoading && distributions?.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                            Aucune distribution récente.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                            </Table>
+                        </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </div>
         </>
         );
     }
