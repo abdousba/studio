@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -76,7 +76,7 @@ export default function ScanClientPage({
     setIsScanning(true);
   };
 
-  const stopScan = () => {
+  const stopScan = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
@@ -88,7 +88,7 @@ export default function ScanClientPage({
     }
     setIsScanning(false);
     setActiveFormForScan(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (!isScanning) return;
@@ -104,10 +104,23 @@ export default function ScanClientPage({
       return;
     }
 
+    let localBarcodeDetector: any;
+    try {
+        // @ts-ignore
+        localBarcodeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'code_128', 'qr_code', 'upc_a'] });
+    } catch(e) {
+        console.error("Failed to create BarcodeDetector:", e);
+        toast({
+            variant: 'destructive',
+            title: 'Erreur de lecteur',
+            description: "Impossible d'initialiser le lecteur de code-barres.",
+        });
+        stopScan();
+        return;
+    }
+
     const startCamera = async () => {
       try {
-        // @ts-ignore
-        const barcodeDetector = new window.BarcodeDetector({ formats: ['ean_13', 'code_128', 'qr_code', 'upc_a'] });
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -116,7 +129,7 @@ export default function ScanClientPage({
           scannerIntervalRef.current = setInterval(async () => {
             if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
             try {
-              const barcodes = await barcodeDetector.detect(videoRef.current);
+              const barcodes = await localBarcodeDetector.detect(videoRef.current);
               if (barcodes.length > 0) {
                 const barcodeValue = barcodes[0].rawValue;
                 
@@ -137,10 +150,14 @@ export default function ScanClientPage({
         }
       } catch (err) {
         console.error('Camera access error:', err);
+        let description = "Impossible d'accéder à la caméra. Veuillez vérifier les autorisations.";
+        if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
+            description = "L'accès à la caméra a été refusé. Veuillez l'autoriser dans les paramètres de votre navigateur.";
+        }
         toast({
           variant: 'destructive',
           title: 'Erreur Caméra',
-          description: "Impossible d'accéder à la caméra. Veuillez vérifier les autorisations.",
+          description,
         });
         stopScan();
       }
@@ -157,8 +174,7 @@ export default function ScanClientPage({
         clearInterval(scannerIntervalRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isScanning]);
+  }, [isScanning, stopScan, activeFormForScan, pchForm, distributionForm, toast]);
 
 
   const handlePchSubmit = (values: PchFormValues) => {
