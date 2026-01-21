@@ -1,30 +1,99 @@
+/**
+ * Core Philosophy: This ruleset establishes a secure, read-only model for a hospital pharmacy inventory system.
+ * The primary security goal is to allow any authenticated application user (including those signed in anonymously)
+ * to view all inventory, distribution, and service data, but to strictly prohibit any modification of this data.
+ * This "default deny" approach for writes ensures that the inventory database cannot be altered until specific,
+ * more granular roles (e.g., 'pharmacist', 'admin') are defined and implemented.
+ *
+ * Data Structure: The data is organized into three distinct, top-level collections:
+ * - /drugs/{barcode}: Stores all drug inventory information.
+ * - /distributions/{id}: Records every instance of a drug being distributed to a hospital service.
+ * - /services/{id}: A reference collection listing the hospital's services or departments.
+ * This flat structure promotes simplicity and independent security management for each data type.
+ *
+ * Key Security Decisions:
+ * - Authenticated Read-Only: All data is readable by any user who has signed into the application. This supports
+ *   UI development for displaying inventory and distribution history.
+ * - All Writes Disabled: All create, update, and delete operations are explicitly denied across all collections.
+ *   This is the most secure posture for a prototype and requires developers to consciously enable write access
+ *   as business logic is defined.
+ * - Anonymous Users Treated as Authenticated: The rules do not distinguish between users signed in with a
+ *   password and those signed in anonymously. Both are granted the same read-only permissions.
+ *
+ * Denormalization for Authorization: The schema design correctly denormalizes the `itemName` onto each
+ * distribution record. While these rules do not yet leverage this for complex authorization (as writes are disabled),
+ * this design is a best practice that will simplify future rules by avoiding costly `get()` calls.
+ *
+ * Structural Segregation: The use of separate top-level collections for `drugs`, `distributions`, and `services`
+ * is a core architectural strength. It allows for clear, independent, and performant security rules for each
+ * distinct data entity without overlap or confusion.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthenticated() {
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * isSignedIn
+     * Checks if the user making the request is authenticated.
+     */
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Users can manage their own profile
-    match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    // --------------------------------
+    // Collection Rules
+    // --------------------------------
+
+    /**
+     * @description Controls access to the drug inventory. Allows any authenticated user to read drug
+     *              information but denies all write operations to protect inventory integrity.
+     * @path /drugs/{barcode}
+     * @allow An authenticated user reads a specific drug's details. (get)
+     * @deny An anonymous user attempts to create a new drug entry. (create)
+     * @principle Provides read-only access to authenticated users while locking down all write operations for security.
+     */
+    match /drugs/{barcode} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
-    // Authenticated users can read and write drugs, services, and distributions.
-    // In a real production app, you would want more granular rules.
-    // For example, only certain roles can add/edit drugs.
-    match /drugs/{drugId} {
-      allow read, write: if isAuthenticated();
+    /**
+     * @description Manages access to drug distribution records. Any authenticated user can view the history
+     *              of drug distributions, but no one can create, modify, or delete these records.
+     * @path /distributions/{id}
+     * @allow An authenticated user lists all past drug distributions. (list)
+     * @deny An authenticated user tries to update the quantity in a distribution record. (update)
+     * @principle Provides read-only access to authenticated users while locking down all write operations for security.
+     */
+    match /distributions/{id} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
-    match /services/{serviceId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    match /distributions/{distributionId} {
-      allow read, write: if isAuthenticated();
+    /**
+     * @description Secures the collection of hospital services/departments. This is reference data that can
+     *              be read by any authenticated user but cannot be changed via the client.
+     * @path /services/{id}
+     * @allow An authenticated user reads the name of a hospital service. (get)
+     * @deny Any user, authenticated or not, attempts to delete a service. (delete)
+     * @principle Provides read-only access to authenticated users while locking down all write operations for security.
+     */
+    match /services/{id} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

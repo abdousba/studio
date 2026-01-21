@@ -1,73 +1,156 @@
 {
   "entities": {
-    "drug": {
+    "Drug": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Drug",
-      "description": "Represents a drug in the pharmacy inventory.",
       "type": "object",
+      "description": "Represents a drug in the hospital pharmacy's inventory.",
       "properties": {
-        "barcode": { "type": "string", "description": "The unique barcode of the drug." },
-        "designation": { "type": "string", "description": "The name of the drug." },
-        "currentStock": { "type": "number", "description": "The current quantity in stock." },
-        "expiryDate": { "type": "string", "description": "The expiration date of the drug batch." },
-        "lowStockThreshold": { "type": "number", "description": "The threshold for low stock warnings." }
+        "barcode": {
+          "type": "string",
+          "description": "Unique identifier for the drug. (Primary Key)",
+          "format": "string"
+        },
+        "designation": {
+          "type": "string",
+          "description": "Name or description of the drug."
+        },
+        "currentStock": {
+          "type": "number",
+          "description": "The current quantity of the drug in stock."
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "The expiration date of the drug.",
+          "format": "date-time"
+        }
       },
-      "required": ["barcode", "designation", "currentStock"]
+      "required": [
+        "barcode",
+        "designation",
+        "currentStock",
+        "expiryDate"
+      ]
     },
-    "service": {
-      "title": "Service",
-      "description": "Represents a hospital service/department.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string", "description": "The name of the service." }
-      },
-      "required": ["name"]
-    },
-    "distribution": {
+    "Distribution": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Distribution",
-      "description": "Represents a distribution of a drug to a service.",
       "type": "object",
+      "description": "Represents the distribution of a drug to a specific service or section.",
       "properties": {
-        "barcode": { "type": "string" },
-        "itemName": { "type": "string" },
-        "quantityDistributed": { "type": "number" },
-        "serviceId": { "type": "string" },
-        "service": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "userId": { "type": "string" },
-        "lotNumber": {"type": "string"}
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the distribution record. (Primary Key)"
+        },
+        "barcode": {
+          "type": "string",
+          "description": "Reference to Drug. (Relationship: Drug 1:N Distribution)"
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Name of the distributed item, could be redundant but useful for denormalization."
+        },
+        "quantiteDistribuee": {
+          "type": "number",
+          "description": "The quantity of the drug distributed."
+        },
+        "serviceSection": {
+          "type": "string",
+          "description": "The service or section to which the drug was distributed."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the distribution.",
+          "format": "date-time"
+        }
       },
-      "required": ["barcode", "itemName", "quantityDistributed", "serviceId", "date", "userId"]
+      "required": [
+        "id",
+        "barcode",
+        "itemName",
+        "quantiteDistribuee",
+        "serviceSection",
+        "date"
+      ]
     },
-    "userProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile.",
+    "Service": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Service",
       "type": "object",
+      "description": "Represents a medical service or section within the hospital.",
       "properties": {
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string", "format": "uri" }
-      }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the service. (Primary Key)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the service or section (e.g., Emergencies, Surgery)."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/drugs/{drugId}": {
-      "schema": { "$ref": "#/entities/drug" },
-      "description": "Collection of drugs in inventory. The document ID is the drug's barcode."
-    },
-    "/services/{serviceId}": {
-      "schema": { "$ref": "#/entities/service" },
-      "description": "Collection of hospital services."
-    },
-    "/distributions/{distributionId}": {
-      "schema": { "$ref": "#/entities/distribution" },
-      "description": "Log of all drug distributions."
-    },
-    "/users/{userId}": {
-        "schema": { "$ref": "#/entities/userProfile" },
-        "description": "User profile information."
-    }
+    "structure": [
+      {
+        "path": "/drugs/{barcode}",
+        "definition": {
+          "entityName": "Drug",
+          "schema": {
+            "$ref": "#/backend/entities/Drug"
+          },
+          "description": "Stores information about each drug, using the barcode as the document ID.",
+          "params": [
+            {
+              "name": "barcode",
+              "description": "The unique barcode of the drug. (Primary Key)"
+            }
+          ]
+        }
+      },
+      {
+        "path": "/distributions/{id}",
+        "definition": {
+          "entityName": "Distribution",
+          "schema": {
+            "$ref": "#/backend/entities/Distribution"
+          },
+          "description": "Stores distribution records, with denormalized 'itemName' for authorization independence. This allows listing distributions securely without needing to access the drug document.",
+          "params": [
+            {
+              "name": "id",
+              "description": "The unique ID of the distribution record. (Primary Key)"
+            }
+          ]
+        }
+      },
+      {
+        "path": "/services/{id}",
+        "definition": {
+          "entityName": "Service",
+          "schema": {
+            "$ref": "#/backend/entities/Service"
+          },
+          "description": "Stores information about medical services or sections within the hospital.",
+          "params": [
+            {
+              "name": "id",
+              "description": "The unique ID of the service. (Primary Key)"
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage drug inventory and distribution within a hospital pharmacy, focusing on security, scalability, and ease of debugging. It leverages denormalization to ensure authorization independence, allowing atomic operations and simpler security rules. The structure separates data with different access requirements into distinct collections, following the Structural Segregation principle.  \n\n*Drugs*: Contains information about each drug.  \n*Distributions*: Stores distribution records. The `itemName` is denormalized from the `Drug` document based on the `barcode` to ensure Authorization Independence for distributions. This supports QAPs by allowing listing distributions without needing to access the drug document. \n*Services*: Contains information about medical services or sections within the hospital.\n\nAuthorization Independence is achieved by denormalizing `itemName` in the `distributions` collection.  This eliminates the need for `get()` calls in security rules when querying or modifying distributions. Segregation ensures that access rules for drugs, distributions, and services can be independently managed without conflicts.\n\nThe structure supports QAPs by segregating the `distributions` collection, each document containing necessary data for listing and filtering."
   }
 }
