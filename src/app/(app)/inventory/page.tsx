@@ -52,6 +52,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DRUG_CATEGORIES } from "@/lib/categories";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 type DrugStatus = {
@@ -102,6 +103,7 @@ const editDrugSchema = z.object({
   initialStock: z.coerce.number().min(0, "Le stock initial ne peut pas être négatif.").optional(),
   lowStockThreshold: z.coerce.number().min(0, "Le seuil ne peut pas être négatif."),
   category: z.string().optional(),
+  conditionnement: z.enum(['Vrac', 'Cacheté']).default('Cacheté'),
 });
 
 type EditDrugFormValues = z.infer<typeof editDrugSchema>;
@@ -217,6 +219,9 @@ function InventoryPageComponent() {
         break;
       case 'surstock':
         intermediateResults = drugs.filter(d => d.lowStockThreshold > 0 && d.currentStock > (d.lowStockThreshold * 3) && !isExpired(d));
+        break;
+      case 'vrac':
+        intermediateResults = drugs.filter(d => d.conditionnement === 'Vrac');
         break;
       default:
         intermediateResults = drugs;
@@ -340,6 +345,7 @@ function InventoryPageComponent() {
               initialStock: editingDrug.initialStock,
               lowStockThreshold: editingDrug.lowStockThreshold,
               category: editingDrug.category || '',
+              conditionnement: editingDrug.conditionnement || 'Cacheté',
           });
       }
   }, [editingDrug, form]);
@@ -354,6 +360,7 @@ function InventoryPageComponent() {
               initialStock: values.initialStock,
               lowStockThreshold: values.lowStockThreshold,
               category: values.category || '',
+              conditionnement: values.conditionnement,
               updatedAt: new Date().toISOString(),
           });
           toast({
@@ -381,6 +388,7 @@ function InventoryPageComponent() {
       "Désignation",
       "Statut",
       "Catégorie",
+      "Conditionnement",
       "Lot",
       "Qté. Initiale",
       "Stock actuel",
@@ -407,6 +415,7 @@ function InventoryPageComponent() {
         drug.designation,
         statusLabels,
         drug.category,
+        drug.conditionnement ?? 'Cacheté',
         drug.lotNumber,
         drug.initialStock,
         drug.currentStock,
@@ -447,6 +456,7 @@ function InventoryPageComponent() {
       "Statut",
       "Lot",
       "Catégorie",
+      "Cond.",
       "Stock actuel",
       "Date d'expiration"
     ];
@@ -460,6 +470,7 @@ function InventoryPageComponent() {
         statusLabels,
         drug.lotNumber ?? 'N/A',
         drug.category ?? 'N/A',
+        drug.conditionnement ?? 'Cacheté',
         drug.currentStock,
         drug.expiryDate,
       ];
@@ -641,6 +652,7 @@ function InventoryPageComponent() {
             <Button onClick={() => handleFilterChange('expired')} variant={activeFilter === 'expired' ? 'destructive' : 'secondary'} size="sm">Expiré</Button>
             <Button onClick={() => handleFilterChange('a_commander')} variant={activeFilter === 'a_commander' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'a_commander' && 'bg-purple-600 hover:bg-purple-700 text-white')}>À commander</Button>
             <Button onClick={() => handleFilterChange('surstock')} variant={activeFilter === 'surstock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'surstock' && 'bg-sky-600 hover:bg-sky-700 text-white')}>Surstock</Button>
+            <Button onClick={() => handleFilterChange('vrac')} variant={activeFilter === 'vrac' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'vrac' && 'bg-gray-500 hover:bg-gray-600 text-white')}>Vrac</Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -652,6 +664,7 @@ function InventoryPageComponent() {
                 <TableHead>Statut</TableHead>
                 <TableHead>Désignation</TableHead>
                 <TableHead>Catégorie</TableHead>
+                <TableHead>Cond.</TableHead>
                 <TableHead>Lot</TableHead>
                 <TableHead>Stock actuel</TableHead>
                 <TableHead>Date d'expiration</TableHead>
@@ -661,7 +674,7 @@ function InventoryPageComponent() {
             <TableBody>
                 {isLoading && (
                 <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                     </TableCell>
                 </TableRow>
@@ -697,10 +710,11 @@ function InventoryPageComponent() {
                             ))}
                         </div>
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-base font-bold">
                         {drug.designation}
                     </TableCell>
                     <TableCell>{drug.category ?? 'N/A'}</TableCell>
+                    <TableCell>{drug.conditionnement ?? 'Cacheté'}</TableCell>
                     <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
                     <TableCell>{drug.currentStock}</TableCell>
                     <TableCell className={cn(isExpired && "text-red-700 font-semibold")}>
@@ -716,7 +730,7 @@ function InventoryPageComponent() {
                 })}
                 {!isLoading && filteredDrugs?.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                             Aucun médicament ne correspond à ces filtres.
                         </TableCell>
                     </TableRow>
@@ -773,6 +787,7 @@ function InventoryPageComponent() {
                         <AccordionContent className="p-3 pt-0">
                             <div className="space-y-2 text-xs border-t pt-3 mt-2">
                                 <p><span className="font-medium text-muted-foreground">Catégorie:</span> {drug.category ?? 'N/A'}</p>
+                                <p><span className="font-medium text-muted-foreground">Conditionnement:</span> {drug.conditionnement ?? 'Cacheté'}</p>
                                 <p><span className="font-medium text-muted-foreground">Lot:</span> {drug.lotNumber ?? 'N/A'}</p>
                                 <p className={cn(isExpired && "text-red-700 font-semibold")}>
                                 <span className="font-medium text-muted-foreground">Expire le:</span> {drug.expiryDate}
@@ -854,6 +869,38 @@ function InventoryPageComponent() {
                                 </FormItem>
                               )}
                           />
+                           <FormField
+                              control={form.control}
+                              name="conditionnement"
+                              render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                  <FormLabel>Conditionnement</FormLabel>
+                                  <FormControl>
+                                    <RadioGroup
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                      className="flex space-x-4 pt-2"
+                                    >
+                                      <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="Cacheté" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">
+                                          Cacheté
+                                        </FormLabel>
+                                      </FormItem>
+                                      <FormItem className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="Vrac" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">Vrac</FormLabel>
+                                      </FormItem>
+                                    </RadioGroup>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                           <FormField
                               control={form.control}
                               name="lowStockThreshold"

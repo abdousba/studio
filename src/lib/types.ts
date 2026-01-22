@@ -8,6 +8,7 @@ export type Drug = {
   lowStockThreshold: number;
   lotNumber?: string;
   category?: string;
+  conditionnement?: 'Vrac' | 'Cacheté';
   createdAt?: string;
   updatedAt?: string;
 };

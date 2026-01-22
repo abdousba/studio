@@ -40,6 +40,11 @@
           "type": "string",
           "description": "Category of the drug (e.g., Antibiotic, Analgesic)."
         },
+        "conditionnement": {
+          "type": "string",
+          "description": "Le type de conditionnement du médicament.",
+          "enum": ["Vrac", "Cacheté"]
+        },
         "createdAt": {
             "type": "string",
             "description": "The date when the drug was first added to the inventory.",
