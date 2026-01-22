@@ -417,9 +417,9 @@ function InventoryPageComponent() {
         </div>
 
         {/* Mobile view */}
-        <div className="space-y-4 sm:hidden">
+        <div className="grid grid-cols-2 gap-3 sm:hidden">
             {isLoading && (
-                <div className="flex justify-center items-center py-10">
+                <div className="col-span-2 flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             )}
@@ -432,52 +432,47 @@ function InventoryPageComponent() {
                         key={drug.id}
                         ref={isHighlighted ? highlightedRowRef as React.Ref<HTMLDivElement> : null}
                         className={cn(
-                            'rounded-lg border p-4 space-y-3',
+                            'rounded-lg border p-3 space-y-2 flex flex-col',
                             isExpired && 'bg-red-50/80',
                             isHighlighted && 'bg-primary/20 motion-safe:animate-pulse ring-2 ring-primary'
                         )}
                     >
-                        <div className="flex justify-between items-start gap-4">
-                             <div className="flex flex-wrap gap-1">
-                                {statuses.map((status) => (
-                                    <Badge key={status.label} variant={status.variant} className={cn(
-                                        'flex items-center',
-                                        status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
-                                        status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
-                                        status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                                        status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
-                                    )}>
-                                        {status.icon && <status.icon className="mr-1 h-3 w-3" />}
-                                        {status.label}
-                                    </Badge>
-                                ))}
-                            </div>
-                            <Button variant="ghost" size="icon" className="-mt-2 -mr-2" onClick={() => setEditingDrug(drug)}>
+                        <div className="flex justify-between items-start gap-2">
+                            <p className="font-medium flex-1 pr-1 break-words text-sm">{drug.designation}</p>
+                            <Button variant="ghost" size="icon" className="-mt-2 -mr-2 h-8 w-8 shrink-0" onClick={() => setEditingDrug(drug)}>
                                 <Pencil className="h-4 w-4" />
                             </Button>
                         </div>
-
-                        <div>
-                            <p className="font-medium">{drug.designation}</p>
-                            <p className="text-sm text-muted-foreground">Lot: {drug.lotNumber ?? 'N/A'}</p>
+                        
+                        <div className="flex-grow space-y-1 text-xs">
+                            <p className="text-muted-foreground">Lot: {drug.lotNumber ?? 'N/A'}</p>
+                            <div className="flex justify-between items-center">
+                                <span>Stock: <span className="font-semibold">{drug.currentStock}</span></span>
+                                <span className={cn(isExpired && "text-red-700 font-semibold")}>
+                                    Exp: {drug.expiryDate}
+                                </span>
+                            </div>
                         </div>
                         
-                        <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
-                            <span className="text-muted-foreground">Stock Actuel</span>
-                            <span className="font-medium">{drug.currentStock}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Date d'expiration</span>
-                            <span className={cn('font-medium', isExpired && "text-red-700")}>
-                            {drug.expiryDate}
-                            </span>
+                        <div className="flex flex-wrap gap-1 pt-2 border-t mt-auto">
+                           {statuses.map((status) => (
+                                <Badge key={status.label} variant={status.variant} className={cn(
+                                    'flex items-center text-[10px] px-1.5 py-0.5',
+                                    status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                    status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                    status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                                )}>
+                                    {status.icon && <status.icon className="mr-0.5 h-2.5 w-2.5" />}
+                                    {status.label}
+                                </Badge>
+                            ))}
                         </div>
                     </div>
                 );
             })}
             {!isLoading && filteredDrugs?.length === 0 && (
-                <div className="text-center text-muted-foreground py-10">
+                <div className="col-span-2 text-center text-muted-foreground py-10">
                     Aucun médicament ne correspond à ce filtre.
                 </div>
             )}
