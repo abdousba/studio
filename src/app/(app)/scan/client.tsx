@@ -39,6 +39,7 @@ const pchFormSchema = z.object({
     required_error: "La date d'expiration est requise.",
   }),
   quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
+  category: z.string().optional(),
 });
 type PchFormValues = z.infer<typeof pchFormSchema>;
 
@@ -81,7 +82,7 @@ export default function ScanClientPage() {
 
     const pchForm = useForm<PchFormValues>({
         resolver: zodResolver(pchFormSchema),
-        defaultValues: { barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined },
+        defaultValues: { barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined, category: '' },
     });
 
     const distributionForm = useForm<DistributionFormValues>({
@@ -111,8 +112,12 @@ export default function ScanClientPage() {
     useEffect(() => {
         if (selectedDrugForPch) {
             pchForm.setValue('designation', selectedDrugForPch.designation);
+            if (selectedDrugForPch.category) {
+              pchForm.setValue('category', selectedDrugForPch.category);
+            }
         } else if(pchBarcode) {
             pchForm.setValue('designation', '');
+            pchForm.setValue('category', '');
         }
     }, [selectedDrugForPch, pchBarcode, pchForm]);
 
@@ -281,7 +286,8 @@ export default function ScanClientPage() {
                         currentStock: newStock,
                         designation: values.designation,
                         expiryDate: expiryDateString,
-                        lotNumber: values.lotNumber
+                        lotNumber: values.lotNumber,
+                        category: values.category || '',
                     });
                      toast({
                         variant: "success",
@@ -297,6 +303,7 @@ export default function ScanClientPage() {
                         expiryDate: expiryDateString,
                         lowStockThreshold: 10, // Default value
                         lotNumber: values.lotNumber,
+                        category: values.category || '',
                     };
                     transaction.set(drugRef, newDrug);
                     toast({
@@ -306,7 +313,7 @@ export default function ScanClientPage() {
                     });
                 }
             });
-            pchForm.reset({ barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined });
+            pchForm.reset({ barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined, category: '' });
             setMode('selection');
         } catch (error) {
             console.error("Error writing to database", error);
@@ -492,6 +499,20 @@ export default function ScanClientPage() {
                             Stock actuel: {selectedDrugForPch.currentStock}
                             </FormDescription>
                         )}
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormField
+                    control={pchForm.control}
+                    name="category"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Catégorie</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Antibiotique, Analgésique" {...field} />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}

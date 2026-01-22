@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
@@ -30,6 +30,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,8 +53,8 @@ import autoTable from 'jspdf-autotable';
 
 
 type DrugStatus = {
-  label: "En Stock" | "Stock Faible" | "Péremption Proche" | "Expiré";
-  variant: "success" | "secondary" | "outline" | "destructive";
+  label: "En Stock" | "Stock Faible" | "Péremption Proche" | "Expiré" | "Surstock" | "À commander";
+  variant: "success" | "secondary" | "outline" | "destructive" | "info" | "warning";
   icon: React.ElementType;
 };
 
@@ -66,9 +77,15 @@ function getStockStatuses(drug: Drug): DrugStatus[] {
             statuses.push({ label: "Péremption Proche", variant: "outline", icon: CalendarClock });
         }
     }
-
-    if (drug.currentStock < drug.lowStockThreshold) {
-        statuses.push({ label: "Stock Faible", variant: "secondary", icon: AlertTriangle });
+    
+    if (!isExpired) {
+      if (drug.currentStock === 0) {
+          statuses.push({ label: "À commander", variant: "warning", icon: AlertTriangle });
+      } else if (drug.currentStock < drug.lowStockThreshold) {
+          statuses.push({ label: "Stock Faible", variant: "secondary", icon: AlertTriangle });
+      } else if (drug.lowStockThreshold > 0 && drug.currentStock > drug.lowStockThreshold * 3) {
+          statuses.push({ label: "Surstock", variant: "info", icon: AlertTriangle });
+      }
     }
     
     if (statuses.length === 0) {
@@ -81,6 +98,7 @@ function getStockStatuses(drug: Drug): DrugStatus[] {
 const editDrugSchema = z.object({
   designation: z.string().min(1, "La désignation est requise."),
   lowStockThreshold: z.coerce.number().min(0, "Le seuil ne peut pas être négatif."),
+  category: z.string().optional(),
 });
 
 type EditDrugFormValues = z.infer<typeof editDrugSchema>;
@@ -100,6 +118,13 @@ function InventoryPageComponent() {
   const highlightedDrugId = searchParams.get('highlight');
   
   const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement>(null);
+  
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    category: '',
+    minQty: '',
+    maxQty: '',
+  });
 
   const handleFilterChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -111,9 +136,24 @@ function InventoryPageComponent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleAdvancedFilterChange = (key: keyof typeof advancedFilters, value: string) => {
+    setAdvancedFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const resetAdvancedFilters = () => {
+    setAdvancedFilters({ category: '', minQty: '', maxQty: '' });
+    setShowAdvancedFilters(false);
+  };
+  
+  const categories = useMemo(() => {
+    if (!drugs) return [];
+    const allCategories = drugs.map(d => d.category).filter(Boolean);
+    return [...new Set(allCategories)] as string[];
+  }, [drugs]);
+
   const filteredDrugs = useMemo(() => {
     if (!drugs) return [];
-
+    
     const isExpired = (drug: Drug) => {
         if (!drug.expiryDate || drug.expiryDate === 'N/A') return false;
         const today = new Date();
@@ -131,21 +171,56 @@ function InventoryPageComponent() {
         return expiryDate >= today && expiryDate <= next3Months;
     };
 
+    let intermediateResults: Drug[];
+
+    // 1. Apply main button filter (from URL)
     switch (activeFilter) {
       case 'low_stock':
-        return drugs.filter(d => d.currentStock < d.lowStockThreshold && !isExpired(d));
+        intermediateResults = drugs.filter(d => d.currentStock > 0 && d.currentStock < d.lowStockThreshold && !isExpired(d));
+        break;
       case 'nearing_expiry':
-        return drugs
-          .filter(isNearingExpiry)
-          .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+        intermediateResults = drugs.filter(isNearingExpiry);
+        break;
       case 'expired':
-        return drugs
-          .filter(isExpired)
-          .sort((a, b) => new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime());
+        intermediateResults = drugs.filter(isExpired);
+        break;
+      case 'a_commander':
+        intermediateResults = drugs.filter(d => d.currentStock === 0 && !isExpired(d));
+        break;
+      case 'surstock':
+        intermediateResults = drugs.filter(d => d.lowStockThreshold > 0 && d.currentStock > (d.lowStockThreshold * 3) && !isExpired(d));
+        break;
       default:
-        return drugs;
+        intermediateResults = drugs;
     }
-  }, [drugs, activeFilter]);
+    
+    // Sort results based on filter
+    if (activeFilter === 'nearing_expiry') {
+      intermediateResults.sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+    } else if (activeFilter === 'expired') {
+      intermediateResults.sort((a, b) => new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime());
+    }
+
+    // 2. Apply advanced filters from state
+    let finalResults = intermediateResults;
+    if (advancedFilters.category) {
+      finalResults = finalResults.filter(d => d.category === advancedFilters.category);
+    }
+    if (advancedFilters.minQty) {
+      const min = parseInt(advancedFilters.minQty, 10);
+      if (!isNaN(min)) {
+        finalResults = finalResults.filter(d => d.currentStock >= min);
+      }
+    }
+    if (advancedFilters.maxQty) {
+      const max = parseInt(advancedFilters.maxQty, 10);
+      if (!isNaN(max)) {
+        finalResults = finalResults.filter(d => d.currentStock <= max);
+      }
+    }
+    
+    return finalResults;
+  }, [drugs, activeFilter, advancedFilters]);
 
 
   useEffect(() => {
@@ -180,6 +255,7 @@ function InventoryPageComponent() {
           form.reset({
               designation: editingDrug.designation,
               lowStockThreshold: editingDrug.lowStockThreshold,
+              category: editingDrug.category || '',
           });
       }
   }, [editingDrug, form]);
@@ -192,6 +268,7 @@ function InventoryPageComponent() {
           await updateDoc(drugRef, {
               designation: values.designation,
               lowStockThreshold: values.lowStockThreshold,
+              category: values.category || '',
           });
           toast({
               variant: "success",
@@ -217,6 +294,7 @@ function InventoryPageComponent() {
     const headers = [
       "Désignation",
       "Statut",
+      "Catégorie",
       "Lot",
       "Qté. Initiale",
       "Stock actuel",
@@ -242,6 +320,7 @@ function InventoryPageComponent() {
       const row = [
         drug.designation,
         statusLabels,
+        drug.category,
         drug.lotNumber,
         drug.initialStock,
         drug.currentStock,
@@ -281,6 +360,7 @@ function InventoryPageComponent() {
       "Désignation",
       "Statut",
       "Lot",
+      "Catégorie",
       "Stock actuel",
       "Date d'expiration"
     ];
@@ -293,6 +373,7 @@ function InventoryPageComponent() {
         drug.designation,
         statusLabels,
         drug.lotNumber ?? 'N/A',
+        drug.category ?? 'N/A',
         drug.currentStock,
         drug.expiryDate,
       ];
@@ -328,70 +409,84 @@ function InventoryPageComponent() {
               Une liste complète de tous les médicaments actuellement dans la pharmacie.
             </CardDescription>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2">
+              <Sheet open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filtres
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filtres Avancés</SheetTitle>
+                    <SheetDescription>
+                      Affinez votre recherche dans l'inventaire.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="category-filter" className="text-right">
+                        Catégorie
+                      </Label>
+                      <Select
+                        value={advancedFilters.category}
+                        onValueChange={(value) => handleAdvancedFilterChange('category', value === 'all' ? '' : value)}
+                      >
+                        <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les catégories</SelectItem>
+                          {categories.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label className="text-right col-span-4 text-center">Quantité</Label>
+                      <Input
+                        id="min-qty"
+                        type="number"
+                        placeholder="Min"
+                        className="col-span-2"
+                        value={advancedFilters.minQty}
+                        onChange={(e) => handleAdvancedFilterChange('minQty', e.target.value)}
+                      />
+                      <Input
+                        id="max-qty"
+                        type="number"
+                        placeholder="Max"
+                        className="col-span-2"
+                        value={advancedFilters.maxQty}
+                        onChange={(e) => handleAdvancedFilterChange('maxQty', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <SheetFooter>
+                    <Button variant="outline" onClick={resetAdvancedFilters}>Réinitialiser</Button>
+                    <Button onClick={() => setShowAdvancedFilters(false)}>Appliquer</Button>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
             <Button onClick={handleExportCSV} variant="secondary" size="sm" disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
               <Download className="mr-2 h-4 w-4" />
-              Exporter en CSV
+              CSV
             </Button>
             <Button onClick={handleExportPDF} variant="secondary" size="sm" disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
               <FileText className="mr-2 h-4 w-4" />
-              Exporter en PDF
+              PDF
             </Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Button
-                onClick={() => handleFilterChange('all')}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                    'transition-colors rounded-md',
-                    activeFilter === 'all'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                )}
-            >
-                Tout
-            </Button>
-            <Button
-                onClick={() => handleFilterChange('low_stock')}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                    'transition-colors rounded-md',
-                    activeFilter === 'low_stock'
-                    ? 'bg-yellow-200 text-yellow-950 shadow-sm hover:bg-yellow-200/80'
-                    : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80'
-                )}
-            >
-                Stock Faible
-            </Button>
-            <Button
-                onClick={() => handleFilterChange('nearing_expiry')}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                    'transition-colors rounded-md',
-                    activeFilter === 'nearing_expiry'
-                    ? 'bg-orange-200 text-orange-950 shadow-sm hover:bg-orange-200/80'
-                    : 'bg-orange-100 text-orange-800 hover:bg-orange-100/80'
-                )}
-            >
-                Péremption Proche
-            </Button>
-            <Button
-                onClick={() => handleFilterChange('expired')}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                    'transition-colors rounded-md',
-                    activeFilter === 'expired'
-                    ? 'bg-red-200 text-red-950 shadow-sm hover:bg-red-200/80'
-                    : 'bg-red-100 text-red-800 hover:bg-red-100/80'
-                )}
-            >
-                Expiré
-            </Button>
+            <Button onClick={() => handleFilterChange('all')} variant={activeFilter === 'all' ? 'default' : 'outline'} size="sm">Tout</Button>
+            <Button onClick={() => handleFilterChange('low_stock')} variant={activeFilter === 'low_stock' ? 'default' : 'outline'} size="sm">Stock Faible</Button>
+            <Button onClick={() => handleFilterChange('nearing_expiry')} variant={activeFilter === 'nearing_expiry' ? 'default' : 'outline'} size="sm">Péremption Proche</Button>
+            <Button onClick={() => handleFilterChange('expired')} variant={activeFilter === 'expired' ? 'destructive' : 'outline'} size="sm">Expiré</Button>
+            <Button onClick={() => handleFilterChange('a_commander')} variant={activeFilter === 'a_commander' ? 'default' : 'outline'} size="sm" className={cn(activeFilter === 'a_commander' && 'bg-purple-600 hover:bg-purple-700 text-white')}>À commander</Button>
+            <Button onClick={() => handleFilterChange('surstock')} variant={activeFilter === 'surstock' ? 'default' : 'outline'} size="sm" className={cn(activeFilter === 'surstock' && 'bg-sky-600 hover:bg-sky-700 text-white')}>Surstock</Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -402,6 +497,7 @@ function InventoryPageComponent() {
                 <TableRow>
                 <TableHead>Statut</TableHead>
                 <TableHead>Désignation</TableHead>
+                <TableHead>Catégorie</TableHead>
                 <TableHead>Lot</TableHead>
                 <TableHead>Stock actuel</TableHead>
                 <TableHead>Date d'expiration</TableHead>
@@ -411,7 +507,7 @@ function InventoryPageComponent() {
             <TableBody>
                 {isLoading && (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
                     </TableCell>
                 </TableRow>
@@ -437,7 +533,9 @@ function InventoryPageComponent() {
                                     status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
                                     status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
                                     status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80',
+                                    status.variant === 'warning' && 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100/80',
+                                    status.variant === 'info' && 'border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80'
                                 )}>
                                     {status.icon && <status.icon className="mr-1 h-3 w-3" />}
                                     {status.label}
@@ -448,6 +546,7 @@ function InventoryPageComponent() {
                     <TableCell className="font-medium">
                         {drug.designation}
                     </TableCell>
+                    <TableCell>{drug.category ?? 'N/A'}</TableCell>
                     <TableCell>{drug.lotNumber ?? 'N/A'}</TableCell>
                     <TableCell>{drug.currentStock}</TableCell>
                     <TableCell className={cn(isExpired && "text-red-700 font-semibold")}>
@@ -463,8 +562,8 @@ function InventoryPageComponent() {
                 })}
                 {!isLoading && filteredDrugs?.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                            Aucun médicament ne correspond à ce filtre.
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                            Aucun médicament ne correspond à ces filtres.
                         </TableCell>
                     </TableRow>
                 )}
@@ -501,6 +600,7 @@ function InventoryPageComponent() {
                         </div>
                         
                         <div className="flex-grow space-y-1 text-xs">
+                             <p className="text-muted-foreground">Cat: {drug.category ?? 'N/A'}</p>
                             <p className="text-muted-foreground">Lot: {drug.lotNumber ?? 'N/A'}</p>
                             <div className="flex justify-between items-center">
                                 <span>Stock: <span className="font-semibold">{drug.currentStock}</span></span>
@@ -512,12 +612,14 @@ function InventoryPageComponent() {
                         
                         <div className="flex flex-wrap gap-1 pt-2 border-t mt-auto">
                            {statuses.map((status) => (
-                                <Badge key={status.label} variant={status.variant} className={cn(
+                                <Badge key={status.label} variant={status.variant as any} className={cn(
                                     'flex items-center text-[10px] px-1.5 py-0.5',
                                     status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
                                     status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
                                     status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80'
+                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80',
+                                    status.variant === 'warning' && 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100/80',
+                                    status.variant === 'info' && 'border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80'
                                 )}>
                                     {status.icon && <status.icon className="mr-0.5 h-2.5 w-2.5" />}
                                     {status.label}
@@ -553,6 +655,19 @@ function InventoryPageComponent() {
                                       <FormLabel>Désignation</FormLabel>
                                       <FormControl>
                                           <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                           <FormField
+                              control={form.control}
+                              name="category"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Catégorie</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="Ex: Antibiotique" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                   </FormItem>

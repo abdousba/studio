@@ -7,6 +7,7 @@ export type Drug = {
   expiryDate: string;
   lowStockThreshold: number;
   lotNumber?: string;
+  category?: string;
 };
 
 export type Service = {

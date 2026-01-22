@@ -35,6 +35,10 @@
         "lotNumber": {
           "type": "string",
           "description": "The lot number of the drug batch."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the drug (e.g., Antibiotic, Analgesic)."
         }
       },
       "required": [
