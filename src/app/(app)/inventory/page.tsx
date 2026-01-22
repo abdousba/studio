@@ -630,12 +630,12 @@ function InventoryPageComponent() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Button onClick={() => handleFilterChange('all')} variant={activeFilter === 'all' ? 'default' : 'outline'} size="sm">Tout</Button>
-            <Button onClick={() => handleFilterChange('low_stock')} variant={activeFilter === 'low_stock' ? 'default' : 'outline'} size="sm">Stock Faible</Button>
-            <Button onClick={() => handleFilterChange('nearing_expiry')} variant={activeFilter === 'nearing_expiry' ? 'default' : 'outline'} size="sm">Péremption Proche</Button>
-            <Button onClick={() => handleFilterChange('expired')} variant={activeFilter === 'expired' ? 'destructive' : 'outline'} size="sm">Expiré</Button>
-            <Button onClick={() => handleFilterChange('a_commander')} variant={activeFilter === 'a_commander' ? 'default' : 'outline'} size="sm" className={cn(activeFilter === 'a_commander' && 'bg-purple-600 hover:bg-purple-700 text-white')}>À commander</Button>
-            <Button onClick={() => handleFilterChange('surstock')} variant={activeFilter === 'surstock' ? 'default' : 'outline'} size="sm" className={cn(activeFilter === 'surstock' && 'bg-sky-600 hover:bg-sky-700 text-white')}>Surstock</Button>
+            <Button onClick={() => handleFilterChange('all')} variant={activeFilter === 'all' ? 'default' : 'secondary'} size="sm">Tout</Button>
+            <Button onClick={() => handleFilterChange('low_stock')} variant={activeFilter === 'low_stock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'low_stock' && 'bg-yellow-500 hover:bg-yellow-600 text-white')}>Stock Faible</Button>
+            <Button onClick={() => handleFilterChange('nearing_expiry')} variant={activeFilter === 'nearing_expiry' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'nearing_expiry' && 'bg-orange-500 hover:bg-orange-600 text-white')}>Péremption Proche</Button>
+            <Button onClick={() => handleFilterChange('expired')} variant={activeFilter === 'expired' ? 'destructive' : 'secondary'} size="sm">Expiré</Button>
+            <Button onClick={() => handleFilterChange('a_commander')} variant={activeFilter === 'a_commander' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'a_commander' && 'bg-purple-600 hover:bg-purple-700 text-white')}>À commander</Button>
+            <Button onClick={() => handleFilterChange('surstock')} variant={activeFilter === 'surstock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'surstock' && 'bg-sky-600 hover:bg-sky-700 text-white')}>Surstock</Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -743,7 +743,7 @@ function InventoryPageComponent() {
                     >
                         <AccordionTrigger className="p-3 text-sm hover:no-underline [&[data-state=open]>svg]:-rotate-90">
                            <div className="flex flex-col items-start gap-2 text-left w-full">
-                                <p className="font-medium break-words">{drug.designation}</p>
+                                <p className="font-semibold text-base break-words">{drug.designation}</p>
                                 <div className="flex justify-between w-full items-center">
                                     <span className="text-muted-foreground text-xs">Stock: <span className="font-semibold text-foreground text-sm">{drug.currentStock}</span></span>
                                     <div className="flex flex-wrap gap-1 justify-end max-w-[70%]">
