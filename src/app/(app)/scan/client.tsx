@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX, Truck } from 'lucide-react';
+import { Barcode, Camera, Plus, Minus, ArrowLeft, X, Loader2, Calendar as CalendarIcon, CalendarX, Truck, Zap, ZapOff } from 'lucide-react';
 import type { Drug, Service, Distribution } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -72,6 +72,9 @@ export default function ScanClientPage() {
     const [activeFormForScan, setActiveFormForScan] = useState<'pch' | 'distribution' | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
+    const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+    const [torchOn, setTorchOn] = useState(false);
+    const [torchSupported, setTorchSupported] = useState(false);
 
     const pchForm = useForm<PchFormValues>({
         resolver: zodResolver(pchFormSchema),
@@ -144,73 +147,107 @@ export default function ScanClientPage() {
     const stopScan = useCallback(() => {
         setIsScanning(false);
         if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
         }
+        // Also reset torch state
+        setTorchOn(false);
+        setTorchSupported(false);
+        videoTrackRef.current = null;
     }, []);
 
-    useEffect(() => {
-    if (!isScanning) return;
-
-    let intervalId: NodeJS.Timeout | null = null;
-    let detector: any; // BarcodeDetector
-
-    const initScanner = async () => {
-      try {
+    const toggleTorch = () => {
+        if (!videoTrackRef.current || !torchSupported) return;
+        const newTorchState = !torchOn;
         // @ts-ignore
-        detector = new window.BarcodeDetector({ formats: ['ean_13', 'code_128', 'qr_code', 'upc_a', 'upc_e'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        videoTrackRef.current.applyConstraints({ advanced: [{ torch: newTorchState }] })
+            .then(() => {
+                setTorchOn(newTorchState);
+            })
+            .catch((e) => {
+                console.error('Failed to toggle torch', e);
+                toast({ variant: 'destructive', title: 'Erreur Lampe Torche', description: 'Impossible d\'activer/désactiver la lampe torche.' });
+            });
+    };
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+    useEffect(() => {
+        if (!isScanning) return;
 
-          intervalId = setInterval(async () => {
-            if (!videoRef.current || videoRef.current.paused || videoRef.current.readyState !== 4) return;
-            
-            try {
-              const barcodes = await detector.detect(videoRef.current);
-              if (barcodes.length > 0) {
-                const barcodeValue = barcodes[0].rawValue;
-                
-                if (activeFormForScan === 'pch') {
-                  pchForm.setValue('barcode', barcodeValue, { shouldValidate: true });
-                } else if (activeFormForScan === 'distribution') {
-                  distributionForm.setValue('barcode', barcodeValue, { shouldValidate: true });
+        let intervalId: NodeJS.Timeout | null = null;
+        let detector: any; // BarcodeDetector
+
+        const initScanner = async () => {
+          try {
+            // @ts-ignore
+            detector = new window.BarcodeDetector({ formats: ['ean_13', 'code_128', 'qr_code', 'upc_a', 'upc_e'] });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                const [track] = stream.getVideoTracks();
+                videoTrackRef.current = track;
+                // @ts-ignore
+                const capabilities = track.getCapabilities();
+                // @ts-ignore
+                if (capabilities.torch) {
+                    setTorchSupported(true);
                 }
+
+                await videoRef.current.play();
+
+                intervalId = setInterval(async () => {
+                if (!videoRef.current || videoRef.current.paused || videoRef.current.readyState !== 4) return;
                 
-                audioRef.current?.play();
-                toast({ title: "Code-barres scanné!", description: `Code: ${barcodeValue}` });
-                stopScan();
-              }
-            } catch (detectError) {
-              // Ignore detection errors, they happen if the frame isn't ready
+                try {
+                    const barcodes = await detector.detect(videoRef.current);
+                    if (barcodes.length > 0) {
+                    const barcodeValue = barcodes[0].rawValue;
+                    
+                    if (activeFormForScan === 'pch') {
+                        pchForm.setValue('barcode', barcodeValue, { shouldValidate: true });
+                    } else if (activeFormForScan === 'distribution') {
+                        distributionForm.setValue('barcode', barcodeValue, { shouldValidate: true });
+                    }
+                    
+                    audioRef.current?.play();
+                    toast({ title: "Code-barres scanné!", description: `Code: ${barcodeValue}` });
+                    stopScan();
+                    }
+                } catch (detectError) {
+                    // Ignore detection errors, they happen if the frame isn't ready
+                }
+                }, 300);
             }
-          }, 300);
-        }
-      } catch (err) {
-        console.error('Camera/Scanner init error:', err);
-        let description = "Impossible d'accéder à la caméra. Veuillez vérifier les autorisations.";
-        if (err instanceof DOMException) {
-          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-            description = "L'accès à la caméra a été refusé. Veuillez l'autoriser dans les paramètres de votre navigateur.";
-          } else if (err.name === "NotFoundError" || err.name === 'DevicesNotFoundError') {
-            description = "Aucune caméra n'a été trouvée sur cet appareil.";
+          } catch (err) {
+            console.error('Camera/Scanner init error:', err);
+            let description = "Impossible d'accéder à la caméra. Veuillez vérifier les autorisations.";
+            if (err instanceof DOMException) {
+              if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                description = "L'accès à la caméra a été refusé. Veuillez l'autoriser dans les paramètres de votre navigateur.";
+              } else if (err.name === "NotFoundError" || err.name === 'DevicesNotFoundError') {
+                description = "Aucune caméra n'a été trouvée sur cet appareil.";
+              }
+            }
+            toast({ variant: 'destructive', title: 'Erreur Caméra', description });
+            stopScan();
           }
-        }
-        toast({ variant: 'destructive', title: 'Erreur Caméra', description });
-        stopScan();
-      }
-    };
+        };
 
-    initScanner();
+        initScanner();
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-      stopScan();
-    };
-  }, [isScanning, activeFormForScan, stopScan, pchForm, distributionForm, toast]);
+        return () => {
+          if (intervalId) clearInterval(intervalId);
+          // When effect cleans up (e.g. isScanning becomes false), stopScan is called from outside.
+          // This cleanup is mainly for component unmount while scanning.
+          if (videoRef.current && videoRef.current.srcObject) {
+             const stream = videoRef.current.srcObject as MediaStream;
+             stream.getTracks().forEach(track => track.stop());
+             videoRef.current.srcObject = null;
+          }
+        };
+      }, [isScanning, activeFormForScan, stopScan, pchForm, distributionForm, toast]);
+
 
     const handlePchSubmit = async (values: PchFormValues) => {
         if (!firestore) {
@@ -343,15 +380,19 @@ export default function ScanClientPage() {
     );
 
     const renderScanner = () => (
-        <div className={cn("fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90", isScanning ? "flex" : "hidden")}>
-        <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-white hover:text-white" onClick={stopScan}>
-            <X className="h-8 w-8" />
-        </Button>
-        <div className="relative w-full max-w-lg aspect-[4/3] overflow-hidden rounded-lg">
-            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+        <div className={cn("fixed inset-0 z-50 flex flex-col items-center justify-center bg-black", isScanning ? "flex" : "hidden")}>
+            <Button variant="ghost" size="icon" className="absolute top-4 right-4 z-10 text-white hover:text-white" onClick={stopScan}>
+                <X className="h-8 w-8" />
+            </Button>
+            <video ref={videoRef} className="absolute w-full h-full object-cover" autoPlay playsInline muted />
             <div className="absolute inset-0 border-4 border-red-500/50 m-8 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
-        </div>
-        <p className="mt-4 text-white">Veuillez aligner le code-barres dans le cadre.</p>
+            <p className="mt-4 text-white relative z-10">Veuillez aligner le code-barres dans le cadre.</p>
+            {torchSupported && (
+                <Button variant="ghost" size="icon" className="absolute bottom-4 z-10 text-white" onClick={toggleTorch}>
+                    {torchOn ? <ZapOff className="h-8 w-8" /> : <Zap className="h-8 w-8" />}
+                    <span className="sr-only">Toggle Flash</span>
+                </Button>
+            )}
         </div>
     );
 
@@ -359,6 +400,7 @@ export default function ScanClientPage() {
         return (
         <>
             {renderScanner()}
+            <audio ref={audioRef} src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto" />
             <Card className="max-w-lg mx-auto relative">
             <CardHeader>
                 <Button variant="ghost" size="icon" className="absolute left-2 top-2" onClick={() => setMode('selection')}>
@@ -502,6 +544,7 @@ export default function ScanClientPage() {
         return (
         <>
             {renderScanner()}
+            <audio ref={audioRef} src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto" />
              <div className="space-y-4">
                 <Button variant="ghost" onClick={() => setMode('selection')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
