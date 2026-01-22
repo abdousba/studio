@@ -131,6 +131,7 @@ function InventoryPageComponent() {
     dateAddedTo: undefined as Date | undefined,
     dateUpdatedFrom: undefined as Date | undefined,
     dateUpdatedTo: undefined as Date | undefined,
+    rotation: '',
   });
 
   const handleFilterChange = (value: string) => {
@@ -156,6 +157,7 @@ function InventoryPageComponent() {
       dateAddedTo: undefined,
       dateUpdatedFrom: undefined,
       dateUpdatedTo: undefined,
+      rotation: '',
     });
     setShowAdvancedFilters(false);
   };
@@ -256,6 +258,31 @@ function InventoryPageComponent() {
         finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) <= toDate);
     }
     
+    // Rotation filter
+    if (advancedFilters.rotation) {
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+
+        finalResults = finalResults.filter(d => {
+            if (!d.updatedAt) return false;
+            const updatedAtDate = new Date(d.updatedAt);
+
+            switch (advancedFilters.rotation) {
+                case 'fast':
+                    return updatedAtDate >= thirtyDaysAgo;
+                case 'slow':
+                    return updatedAtDate < thirtyDaysAgo && updatedAtDate >= ninetyDaysAgo;
+                case 'inactive':
+                    return updatedAtDate < ninetyDaysAgo;
+                default:
+                    return true;
+            }
+        });
+    }
+
     return finalResults;
   }, [drugs, activeFilter, advancedFilters]);
 
@@ -446,6 +473,11 @@ function InventoryPageComponent() {
             <CardDescription>
               Une liste complète de tous les médicaments actuellement dans la pharmacie.
             </CardDescription>
+            {!isLoading && (
+              <div className="text-sm text-muted-foreground mt-1">
+                <strong>{filteredDrugs?.length ?? 0}</strong> produits affichés.
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
               <Sheet open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
@@ -479,6 +511,25 @@ function InventoryPageComponent() {
                           {categories.map(cat => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="rotation-filter" className="text-right">
+                        Rotation
+                      </Label>
+                      <Select
+                        value={advancedFilters.rotation}
+                        onValueChange={(value) => handleAdvancedFilterChange('rotation', value === 'all' ? '' : value)}
+                      >
+                        <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Toutes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les rotations</SelectItem>
+                          <SelectItem value="fast">Rotation rapide (30j)</SelectItem>
+                          <SelectItem value="slow">Rotation lente (30-90j)</SelectItem>
+                          <SelectItem value="inactive">Produits inactifs (&gt;90j)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
