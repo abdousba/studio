@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Bell, User, Menu, LogOut, AlertTriangle, CalendarClock } from "lucide-react"
+import { Bell, User, Menu, LogOut, AlertTriangle, CalendarClock, Check } from "lucide-react"
 import { getAuth, signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useRouter } from "next/navigation"
 import { useUser, useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { Search } from "./Search";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { collection } from "firebase/firestore";
@@ -38,6 +38,20 @@ export function Header() {
     description: string;
     drugId: string;
   };
+
+  const [readNotifications, setReadNotifications] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const storedReadIds = localStorage.getItem('readNotificationIds');
+      if (storedReadIds) {
+          setReadNotifications(JSON.parse(storedReadIds));
+      }
+    } catch (error) {
+      console.error("Failed to parse read notifications from localStorage", error);
+      localStorage.removeItem('readNotificationIds');
+    }
+  }, []);
 
   const notifications = useMemo(() => {
     if (!drugs) return [];
@@ -83,8 +97,8 @@ export function Header() {
       });
     });
 
-    return allNotifications;
-  }, [drugs]);
+    return allNotifications.filter(n => !readNotifications.includes(n.id));
+  }, [drugs, readNotifications]);
 
   const handleLogout = async () => {
     const auth = getAuth();
@@ -94,6 +108,14 @@ export function Header() {
 
   const handleNotificationClick = (drugId: string) => {
     router.push(`/inventory?highlight=${drugId}`);
+  };
+  
+  const handleMarkAllAsRead = () => {
+    if (notifications.length === 0) return;
+    const currentNotificationIds = notifications.map(n => n.id);
+    const newReadIds = [...new Set([...readNotifications, ...currentNotificationIds])];
+    setReadNotifications(newReadIds);
+    localStorage.setItem('readNotificationIds', JSON.stringify(newReadIds));
   };
 
   return (
@@ -153,6 +175,17 @@ export function Header() {
               <div className="p-8 text-center text-sm text-muted-foreground">
                 Aucune nouvelle notification.
               </div>
+            )}
+            {notifications.length > 0 && (
+              <>
+                <Separator />
+                <div className="p-2">
+                    <Button size="sm" variant="outline" className="w-full" onClick={handleMarkAllAsRead}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Tout marquer comme lu
+                    </Button>
+                </div>
+              </>
             )}
           </PopoverContent>
         </Popover>
