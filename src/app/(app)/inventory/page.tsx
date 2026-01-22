@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
@@ -37,6 +37,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 type DrugStatus = {
@@ -269,6 +271,52 @@ function InventoryPageComponent() {
     });
   };
 
+  const handleExportPDF = () => {
+    if (!filteredDrugs || filteredDrugs.length === 0) return;
+
+    const doc = new jsPDF();
+    doc.setFont('helvetica', 'normal');
+
+    const tableColumns = [
+      "Désignation",
+      "Statut",
+      "Lot",
+      "Stock actuel",
+      "Date d'expiration"
+    ];
+    const tableRows: (string | number | undefined | null)[][] = [];
+
+    filteredDrugs.forEach(drug => {
+      const statuses = getStockStatuses(drug);
+      const statusLabels = statuses.map(s => s.label).join(' / ');
+      const drugData = [
+        drug.designation,
+        statusLabels,
+        drug.lotNumber ?? 'N/A',
+        drug.currentStock,
+        drug.expiryDate,
+      ];
+      tableRows.push(drugData);
+    });
+
+    doc.text(`Inventaire - Vue: ${activeFilter}`, 14, 15);
+    
+    autoTable(doc, {
+      head: [tableColumns],
+      body: tableRows,
+      startY: 20,
+      styles: { font: 'helvetica' },
+    });
+
+    doc.save(`inventaire_${activeFilter}_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    toast({
+        variant: "success",
+        title: "Exportation PDF réussie",
+        description: `Le fichier PDF de la vue "${activeFilter}" a été téléchargé.`,
+    });
+  };
+
 
   return (
     <Card>
@@ -280,10 +328,16 @@ function InventoryPageComponent() {
               Une liste complète de tous les médicaments actuellement dans la pharmacie.
             </CardDescription>
           </div>
-          <Button onClick={handleExportCSV} disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter la vue en CSV
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleExportCSV} variant="secondary" size="sm" disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
+              <Download className="mr-2 h-4 w-4" />
+              Exporter en CSV
+            </Button>
+            <Button onClick={handleExportPDF} variant="secondary" size="sm" disabled={isLoading || !filteredDrugs || filteredDrugs.length === 0}>
+              <FileText className="mr-2 h-4 w-4" />
+              Exporter en PDF
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button
