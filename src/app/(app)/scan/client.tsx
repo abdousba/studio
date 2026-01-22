@@ -4,13 +4,10 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
@@ -36,9 +33,7 @@ const pchFormSchema = z.object({
   barcode: z.string().min(1, 'Le code-barres est requis.'),
   designation: z.string().min(1, 'Le nom du médicament est requis.'),
   lotNumber: z.string().min(1, 'Le numéro de lot est requis.'),
-  expiryDate: z.date({
-    required_error: "La date d'expiration est requise.",
-  }),
+  expiryDate: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "La date doit être au format JJ/MM/AAAA."),
   quantity: z.coerce.number().min(1, 'La quantité doit être au moins de 1.'),
   category: z.string().optional(),
 });
@@ -83,7 +78,7 @@ export default function ScanClientPage() {
 
     const pchForm = useForm<PchFormValues>({
         resolver: zodResolver(pchFormSchema),
-        defaultValues: { barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined, category: '' },
+        defaultValues: { barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: '', category: '' },
     });
 
     const distributionForm = useForm<DistributionFormValues>({
@@ -278,7 +273,8 @@ export default function ScanClientPage() {
         try {
             await runTransaction(firestore, async (transaction) => {
                 const drugDoc = await transaction.get(drugRef);
-                const expiryDateString = format(values.expiryDate, 'yyyy-MM-dd');
+                const [day, month, year] = values.expiryDate.split('/');
+                const expiryDateString = `${year}-${month}-${day}`;
                 const now = new Date().toISOString();
 
                 if (drugDoc.exists()) {
@@ -318,7 +314,7 @@ export default function ScanClientPage() {
                     });
                 }
             });
-            pchForm.reset({ barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: undefined, category: '' });
+            pchForm.reset({ barcode: '', designation: '', lotNumber: '', quantity: 1, expiryDate: '', category: '' });
             setMode('selection');
         } catch (error) {
             console.error("Error writing to database", error);
@@ -553,43 +549,18 @@ export default function ScanClientPage() {
                       control={pchForm.control}
                       name="expiryDate"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                           <FormLabel className="flex items-center gap-2">
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2">
                                 <CalendarX className="h-5 w-5 text-destructive" />
                                 <span>Date d'expiration</span>
                             </FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Choisissez une date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date < new Date(new Date().setHours(0,0,0,0))
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
+                            <FormControl>
+                                <div className="relative">
+                                    <Input placeholder="JJ/MM/AAAA" {...field} />
+                                    <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                                </div>
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
                       )}
                     />

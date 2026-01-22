@@ -50,9 +50,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DRUG_CATEGORIES } from "@/lib/categories";
 
@@ -130,10 +127,10 @@ function InventoryPageComponent() {
     category: '',
     minQty: '',
     maxQty: '',
-    dateAddedFrom: undefined as Date | undefined,
-    dateAddedTo: undefined as Date | undefined,
-    dateUpdatedFrom: undefined as Date | undefined,
-    dateUpdatedTo: undefined as Date | undefined,
+    dateAddedFrom: '',
+    dateAddedTo: '',
+    dateUpdatedFrom: '',
+    dateUpdatedTo: '',
     rotation: '',
   });
 
@@ -147,7 +144,7 @@ function InventoryPageComponent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handleAdvancedFilterChange = (key: keyof typeof advancedFilters, value: string | Date | undefined) => {
+  const handleAdvancedFilterChange = (key: keyof typeof advancedFilters, value: string) => {
     setAdvancedFilters(prev => ({ ...prev, [key]: value }));
   };
 
@@ -156,10 +153,10 @@ function InventoryPageComponent() {
       category: '',
       minQty: '',
       maxQty: '',
-      dateAddedFrom: undefined,
-      dateAddedTo: undefined,
-      dateUpdatedFrom: undefined,
-      dateUpdatedTo: undefined,
+      dateAddedFrom: '',
+      dateAddedTo: '',
+      dateUpdatedFrom: '',
+      dateUpdatedTo: '',
       rotation: '',
     });
     setShowAdvancedFilters(false);
@@ -174,27 +171,38 @@ function InventoryPageComponent() {
   const filteredDrugs = useMemo(() => {
     if (!drugs) return [];
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const isExpired = (drug: Drug) => {
         if (!drug.expiryDate || drug.expiryDate === 'N/A') return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         const expiryDate = new Date(drug.expiryDate);
         return expiryDate < today;
     };
 
     const isNearingExpiry = (drug: Drug) => {
         if (!drug.expiryDate || drug.expiryDate === 'N/A' || isExpired(drug)) return false;
-        const today = new Date();
         const next3Months = new Date();
         next3Months.setMonth(today.getMonth() + 3);
         const expiryDate = new Date(drug.expiryDate);
-        return expiryDate >= today && expiryDate <= next3Months;
+        return expiryDate <= next3Months;
+    };
+
+    const isEnStock = (drug: Drug) => {
+      return !isExpired(drug) && 
+             !isNearingExpiry(drug) && 
+             drug.currentStock > 0 &&
+             drug.currentStock >= drug.lowStockThreshold &&
+             (drug.lowStockThreshold === 0 || drug.currentStock <= drug.lowStockThreshold * 3);
     };
 
     let intermediateResults: Drug[];
 
     // 1. Apply main button filter (from URL)
     switch (activeFilter) {
+      case 'en_stock':
+        intermediateResults = drugs.filter(isEnStock);
+        break;
       case 'low_stock':
         intermediateResults = drugs.filter(d => d.currentStock > 0 && d.currentStock < d.lowStockThreshold && !isExpired(d));
         break;
@@ -239,26 +247,34 @@ function InventoryPageComponent() {
       }
     }
 
+    // Date parsing helper
+    const parseDate = (dateString: string): Date | null => {
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return null;
+        const [day, month, year] = dateString.split('/').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
     // Date filters
-    if (advancedFilters.dateAddedFrom) {
-        const fromDate = new Date(advancedFilters.dateAddedFrom);
-        fromDate.setHours(0, 0, 0, 0);
-        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) >= fromDate);
+    const fromDateAdded = parseDate(advancedFilters.dateAddedFrom);
+    if (fromDateAdded) {
+        fromDateAdded.setHours(0, 0, 0, 0);
+        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) >= fromDateAdded);
     }
-    if (advancedFilters.dateAddedTo) {
-        const toDate = new Date(advancedFilters.dateAddedTo);
-        toDate.setHours(23, 59, 59, 999);
-        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) <= toDate);
+    const toDateAdded = parseDate(advancedFilters.dateAddedTo);
+    if (toDateAdded) {
+        toDateAdded.setHours(23, 59, 59, 999);
+        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) <= toDateAdded);
     }
-    if (advancedFilters.dateUpdatedFrom) {
-        const fromDate = new Date(advancedFilters.dateUpdatedFrom);
-        fromDate.setHours(0, 0, 0, 0);
-        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) >= fromDate);
+    
+    const fromDateUpdated = parseDate(advancedFilters.dateUpdatedFrom);
+    if (fromDateUpdated) {
+        fromDateUpdated.setHours(0, 0, 0, 0);
+        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) >= fromDateUpdated);
     }
-    if (advancedFilters.dateUpdatedTo) {
-        const toDate = new Date(advancedFilters.dateUpdatedTo);
-        toDate.setHours(23, 59, 59, 999);
-        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) <= toDate);
+    const toDateUpdated = parseDate(advancedFilters.dateUpdatedTo);
+    if (toDateUpdated) {
+        toDateUpdated.setHours(23, 59, 59, 999);
+        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) <= toDateUpdated);
     }
     
     // Rotation filter
@@ -561,55 +577,43 @@ function InventoryPageComponent() {
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">Date d'ajout</Label>
                         <div className="col-span-3 grid grid-cols-2 gap-2">
-                           <Popover>
-                              <PopoverTrigger asChild>
-                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateAddedFrom && "text-muted-foreground")}>
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {advancedFilters.dateAddedFrom ? format(advancedFilters.dateAddedFrom, 'dd/MM/yy') : <span>Début</span>}
-                                  </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                  <Calendar mode="single" selected={advancedFilters.dateAddedFrom} onSelect={(date) => handleAdvancedFilterChange('dateAddedFrom', date)} initialFocus />
-                              </PopoverContent>
-                          </Popover>
-                          <Popover>
-                              <PopoverTrigger asChild>
-                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateAddedTo && "text-muted-foreground")}>
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {advancedFilters.dateAddedTo ? format(advancedFilters.dateAddedTo, 'dd/MM/yy') : <span>Fin</span>}
-                                  </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                  <Calendar mode="single" selected={advancedFilters.dateAddedTo} onSelect={(date) => handleAdvancedFilterChange('dateAddedTo', date)} initialFocus />
-                              </PopoverContent>
-                          </Popover>
+                            <div className="relative">
+                                <Input
+                                    placeholder="Début (JJ/MM/AAAA)"
+                                    value={advancedFilters.dateAddedFrom}
+                                    onChange={(e) => handleAdvancedFilterChange('dateAddedFrom', e.target.value)}
+                                />
+                                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    placeholder="Fin (JJ/MM/AAAA)"
+                                    value={advancedFilters.dateAddedTo}
+                                    onChange={(e) => handleAdvancedFilterChange('dateAddedTo', e.target.value)}
+                                />
+                                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            </div>
                         </div>
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">Date de MàJ</Label>
                         <div className="col-span-3 grid grid-cols-2 gap-2">
-                           <Popover>
-                              <PopoverTrigger asChild>
-                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateUpdatedFrom && "text-muted-foreground")}>
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {advancedFilters.dateUpdatedFrom ? format(advancedFilters.dateUpdatedFrom, 'dd/MM/yy') : <span>Début</span>}
-                                  </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                  <Calendar mode="single" selected={advancedFilters.dateUpdatedFrom} onSelect={(date) => handleAdvancedFilterChange('dateUpdatedFrom', date)} initialFocus />
-                              </PopoverContent>
-                          </Popover>
-                          <Popover>
-                              <PopoverTrigger asChild>
-                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateUpdatedTo && "text-muted-foreground")}>
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      {advancedFilters.dateUpdatedTo ? format(advancedFilters.dateUpdatedTo, 'dd/MM/yy') : <span>Fin</span>}
-                                  </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                  <Calendar mode="single" selected={advancedFilters.dateUpdatedTo} onSelect={(date) => handleAdvancedFilterChange('dateUpdatedTo', date)} initialFocus />
-                              </PopoverContent>
-                          </Popover>
+                           <div className="relative">
+                                <Input
+                                    placeholder="Début (JJ/MM/AAAA)"
+                                    value={advancedFilters.dateUpdatedFrom}
+                                    onChange={(e) => handleAdvancedFilterChange('dateUpdatedFrom', e.target.value)}
+                                />
+                                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    placeholder="Fin (JJ/MM/AAAA)"
+                                    value={advancedFilters.dateUpdatedTo}
+                                    onChange={(e) => handleAdvancedFilterChange('dateUpdatedTo', e.target.value)}
+                                />
+                                <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+                            </div>
                         </div>
                     </div>
                   </div>
@@ -631,6 +635,7 @@ function InventoryPageComponent() {
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button onClick={() => handleFilterChange('all')} variant={activeFilter === 'all' ? 'default' : 'secondary'} size="sm">Tout</Button>
+            <Button onClick={() => handleFilterChange('en_stock')} variant={activeFilter === 'en_stock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'en_stock' && 'bg-green-500 hover:bg-green-600 text-white')}>En Stock</Button>
             <Button onClick={() => handleFilterChange('low_stock')} variant={activeFilter === 'low_stock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'low_stock' && 'bg-yellow-500 hover:bg-yellow-600 text-white')}>Stock Faible</Button>
             <Button onClick={() => handleFilterChange('nearing_expiry')} variant={activeFilter === 'nearing_expiry' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'nearing_expiry' && 'bg-orange-500 hover:bg-orange-600 text-white')}>Péremption Proche</Button>
             <Button onClick={() => handleFilterChange('expired')} variant={activeFilter === 'expired' ? 'destructive' : 'secondary'} size="sm">Expiré</Button>
