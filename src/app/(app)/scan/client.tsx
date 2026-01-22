@@ -369,11 +369,31 @@ export default function ScanClientPage() {
 
     const QuantityInput = ({ form, fieldName }: { form: any, fieldName: "quantity" }) => (
         <div className="flex items-center gap-4">
-        <Button type="button" variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => form.setValue(fieldName, Math.max(1, form.getValues(fieldName) - 1))}>
+        <Button type="button" variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => {
+            const currentValue = form.getValues(fieldName);
+            const numericValue = typeof currentValue === 'number' && !isNaN(currentValue) ? currentValue : 1;
+            form.setValue(fieldName, Math.max(1, numericValue - 1), { shouldValidate: true });
+        }}>
             <Minus className="h-6 w-6" />
         </Button>
-        <span className="text-4xl font-bold w-20 text-center">{form.watch(fieldName)}</span>
-        <Button type="button" variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => form.setValue(fieldName, form.getValues(fieldName) + 1)}>
+        <Input
+            type="number"
+            className="w-24 text-center text-4xl font-bold border-0 bg-transparent shadow-none focus-visible:ring-0 p-0 h-auto"
+            {...form.register(fieldName, {
+                valueAsNumber: true,
+                onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    if (value === '' || parseInt(value, 10) < 1) {
+                        form.setValue(fieldName, 1, { shouldValidate: true });
+                    }
+                }
+            })}
+        />
+        <Button type="button" variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => {
+             const currentValue = form.getValues(fieldName);
+             const numericValue = typeof currentValue === 'number' && !isNaN(currentValue) ? currentValue : 0;
+             form.setValue(fieldName, numericValue + 1, { shouldValidate: true });
+        }}>
             <Plus className="h-6 w-6" />
         </Button>
         </div>
