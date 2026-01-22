@@ -53,6 +53,8 @@ import autoTable from 'jspdf-autotable';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DRUG_CATEGORIES } from "@/lib/categories";
 
 
 type DrugStatus = {
@@ -719,8 +721,8 @@ function InventoryPageComponent() {
         </div>
 
         {/* Mobile view */}
-        <div className="grid grid-cols-2 gap-3 sm:hidden">
-            {isLoading && (
+        <Accordion type="single" collapsible className="space-y-3 sm:hidden" ref={highlightedDrugId ? highlightedRowRef as React.Ref<HTMLDivElement> : null}>
+             {isLoading && (
                 <div className="col-span-2 flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -730,50 +732,55 @@ function InventoryPageComponent() {
                 const isExpired = statuses.some(s => s.label === 'Expiré');
                 const isHighlighted = drug.id === highlightedDrugId;
                 return (
-                    <div
+                    <AccordionItem 
+                        value={drug.id} 
                         key={drug.id}
-                        ref={isHighlighted ? highlightedRowRef as React.Ref<HTMLDivElement> : null}
                         className={cn(
-                            'rounded-lg border p-3 space-y-2 flex flex-col',
-                            isExpired && 'bg-red-50/80',
+                            'border-b-0 rounded-lg border',
+                            isExpired && 'bg-red-50/80 border-red-200',
                             isHighlighted && 'bg-primary/20 motion-safe:animate-pulse ring-2 ring-primary'
                         )}
                     >
-                        <div className="flex justify-between items-start gap-2">
-                            <p className="font-medium flex-1 pr-1 break-words text-sm">{drug.designation}</p>
-                            <Button variant="ghost" size="icon" className="-mt-2 -mr-2 h-8 w-8 shrink-0" onClick={() => setEditingDrug(drug)}>
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        
-                        <div className="flex-grow space-y-1 text-xs">
-                             <p className="text-muted-foreground">Cat: {drug.category ?? 'N/A'}</p>
-                            <p className="text-muted-foreground">Lot: {drug.lotNumber ?? 'N/A'}</p>
-                            <div className="flex justify-between items-center">
-                                <span>Stock: <span className="font-semibold">{drug.currentStock}</span></span>
-                                <span className={cn(isExpired && "text-red-700 font-semibold")}>
-                                    Exp: {drug.expiryDate}
-                                </span>
+                        <AccordionTrigger className="p-3 text-sm hover:no-underline [&[data-state=open]>svg]:-rotate-90">
+                           <div className="flex flex-col items-start gap-2 text-left w-full">
+                                <p className="font-medium break-words">{drug.designation}</p>
+                                <div className="flex justify-between w-full items-center">
+                                    <span className="text-muted-foreground text-xs">Stock: <span className="font-semibold text-foreground text-sm">{drug.currentStock}</span></span>
+                                    <div className="flex flex-wrap gap-1 justify-end max-w-[70%]">
+                                        {statuses.map((status) => (
+                                            <Badge key={status.label} variant={status.variant as any} className={cn(
+                                                'flex items-center text-[10px] px-1.5 py-0.5',
+                                                status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                                status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                                status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                                status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80',
+                                                status.variant === 'warning' && 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100/80',
+                                                status.variant === 'info' && 'border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80'
+                                            )}>
+                                                {status.icon && <status.icon className="mr-0.5 h-2.5 w-2.5" />}
+                                                {status.label}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1 pt-2 border-t mt-auto">
-                           {statuses.map((status) => (
-                                <Badge key={status.label} variant={status.variant as any} className={cn(
-                                    'flex items-center text-[10px] px-1.5 py-0.5',
-                                    status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
-                                    status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
-                                    status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
-                                    status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80',
-                                    status.variant === 'warning' && 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100/80',
-                                    status.variant === 'info' && 'border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80'
-                                )}>
-                                    {status.icon && <status.icon className="mr-0.5 h-2.5 w-2.5" />}
-                                    {status.label}
-                                </Badge>
-                            ))}
-                        </div>
-                    </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-3 pt-0">
+                            <div className="space-y-2 text-xs border-t pt-3 mt-2">
+                                <p><span className="font-medium text-muted-foreground">Catégorie:</span> {drug.category ?? 'N/A'}</p>
+                                <p><span className="font-medium text-muted-foreground">Lot:</span> {drug.lotNumber ?? 'N/A'}</p>
+                                <p className={cn(isExpired && "text-red-700 font-semibold")}>
+                                <span className="font-medium text-muted-foreground">Expire le:</span> {drug.expiryDate}
+                                </p>
+                                <div className="flex justify-end pt-2">
+                                    <Button variant="outline" size="sm" onClick={() => setEditingDrug(drug)}>
+                                        <Pencil className="mr-2 h-3 w-3" />
+                                        Modifier
+                                    </Button>
+                                </div>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
                 );
             })}
             {!isLoading && filteredDrugs?.length === 0 && (
@@ -781,7 +788,7 @@ function InventoryPageComponent() {
                     Aucun médicament ne correspond à ce filtre.
                 </div>
             )}
-        </div>
+        </Accordion>
       </CardContent>
        {editingDrug && (
           <Dialog open={!!editingDrug} onOpenChange={(isOpen) => !isOpen && setEditingDrug(null)}>
@@ -824,13 +831,22 @@ function InventoryPageComponent() {
                               control={form.control}
                               name="category"
                               render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Catégorie</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="Ex: Antibiotique" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
+                                <FormItem>
+                                    <FormLabel>Catégorie</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Sélectionnez une catégorie" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {DRUG_CATEGORIES.map(cat => (
+                                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
                               )}
                           />
                           <FormField

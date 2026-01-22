@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, updateDoc, collection, addDoc, runTransaction, query, orderBy, limit } from 'firebase/firestore';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { DRUG_CATEGORIES } from '@/lib/categories';
 
 
 type Mode = 'selection' | 'pch' | 'distribution';
@@ -512,17 +513,26 @@ export default function ScanClientPage() {
                     />
 
                     <FormField
-                    control={pchForm.control}
-                    name="category"
-                    render={({ field }) => (
+                      control={pchForm.control}
+                      name="category"
+                      render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Catégorie</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ex: Antibiotique, Analgésique" {...field} />
-                        </FormControl>
-                        <FormMessage />
+                          <FormLabel>Catégorie</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez une catégorie" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DRUG_CATEGORIES.map(cat => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                    )}
+                      )}
                     />
 
                     <FormField
