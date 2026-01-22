@@ -21,12 +21,12 @@ import Link from 'next/link';
 
 function DashboardSkeleton() {
   return (
-    <div className="grid gap-4 md:gap-8 md:grid-cols-2 xl:grid-cols-4">
-      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
-      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
-      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
-      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
-      <Card className="xl:col-span-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 xl:grid-cols-4">
+      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent className="p-3 pt-2"><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
+      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent className="p-3 pt-2"><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
+      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent className="p-3 pt-2"><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
+      <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-2"><Skeleton className="h-4 w-24" /></CardHeader><CardContent className="p-3 pt-2"><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-full mt-1" /></CardContent></Card>
+      <Card className="col-span-2 md:col-span-2 xl:col-span-4">
         <CardHeader>
           <CardTitle>Aperçu de la distribution</CardTitle>
           <CardDescription>
@@ -107,57 +107,57 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="grid gap-4 md:gap-8 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 xl:grid-cols-4">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="p-3 pb-2">
           <CardTitle className="text-sm font-medium">Lots de médicaments au total</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-2">
           <div className="text-2xl font-bold">{totalDrugs}</div>
           <p className="text-xs text-muted-foreground">
-            Lots de médicaments uniques en inventaire
+            Lots de médicaments uniques
           </p>
         </CardContent>
       </Card>
       <Link href="/inventory?filter=low_stock">
         <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
-          <CardHeader className="pb-2">
+          <CardHeader className="p-3 pb-2">
             <CardTitle className="text-sm font-medium">Articles en stock faible</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-2">
             <div className="text-2xl font-bold">{lowStockItems}</div>
             <p className="text-xs text-muted-foreground">
-              Articles en dessous de leur seuil
+              Articles sous le seuil
             </p>
           </CardContent>
         </Card>
       </Link>
       <Link href="/inventory?filter=nearing_expiry">
         <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
-          <CardHeader className="pb-2">
+          <CardHeader className="p-3 pb-2">
             <CardTitle className="text-sm font-medium">Proche de l'expiration</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-2">
             <div className="text-2xl font-bold">{nearingExpiryItems}</div>
             <p className="text-xs text-muted-foreground">
-              Expirant dans les 3 prochains mois
+              Expire dans les 3 mois
             </p>
           </CardContent>
         </Card>
       </Link>
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="p-3 pb-2">
           <CardTitle className="text-sm font-medium">Distributions récentes</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-2">
           <div className="text-2xl font-bold">+{recentDistributions}</div>
           <p className="text-xs text-muted-foreground">
-            Au cours des 7 derniers jours
+            Pendant 7 derniers jours
           </p>
         </CardContent>
       </Card>
 
-      <Card className="xl:col-span-4">
+      <Card className="col-span-2 md:col-span-2 xl:col-span-4">
         <CardHeader>
           <CardTitle>Aperçu de la distribution</CardTitle>
           <CardDescription>
