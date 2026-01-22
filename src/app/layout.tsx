@@ -7,6 +7,8 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   title: 'PharmaSuivi',
   description: 'Gestion des stocks de pharmacie hospitalière',
+  manifest: '/manifest.json',
+  themeColor: '#FFFFFF',
 };
 
 export default function RootLayout({
