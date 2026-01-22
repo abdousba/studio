@@ -100,6 +100,7 @@ function getStockStatuses(drug: Drug): DrugStatus[] {
 
 const editDrugSchema = z.object({
   designation: z.string().min(1, "La désignation est requise."),
+  initialStock: z.coerce.number().min(0, "Le stock initial ne peut pas être négatif.").optional(),
   lowStockThreshold: z.coerce.number().min(0, "Le seuil ne peut pas être négatif."),
   category: z.string().optional(),
 });
@@ -318,6 +319,7 @@ function InventoryPageComponent() {
       if (editingDrug) {
           form.reset({
               designation: editingDrug.designation,
+              initialStock: editingDrug.initialStock,
               lowStockThreshold: editingDrug.lowStockThreshold,
               category: editingDrug.category || '',
           });
@@ -331,6 +333,7 @@ function InventoryPageComponent() {
       try {
           await updateDoc(drugRef, {
               designation: values.designation,
+              initialStock: values.initialStock,
               lowStockThreshold: values.lowStockThreshold,
               category: values.category || '',
               updatedAt: new Date().toISOString(),
@@ -799,6 +802,19 @@ function InventoryPageComponent() {
                                       <FormLabel>Désignation</FormLabel>
                                       <FormControl>
                                           <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                           <FormField
+                              control={form.control}
+                              name="initialStock"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Stock initial</FormLabel>
+                                      <FormControl>
+                                          <Input type="number" placeholder="Quantité initiale à la réception" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                   </FormItem>
