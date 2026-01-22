@@ -35,7 +35,7 @@ function DashboardSkeleton() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] w-full flex items-center justify-center">
+          <div className="h-[400px] w-full flex items-center justify-center sm:h-[300px]">
             <Skeleton className="h-full w-full" />
           </div>
         </CardContent>
@@ -92,11 +92,15 @@ export default function DashboardPage() {
       serviceCounts[service.name] = 0;
     }
     for (const dist of distributions) {
-      if (serviceCounts[dist.service] !== undefined) {
+      // Handle cases where a distribution might be for a service that was deleted
+      if (dist.service in serviceCounts) {
         serviceCounts[dist.service] += dist.quantityDistributed;
       }
     }
-    return Object.entries(serviceCounts).map(([name, total]) => ({ name, total }));
+    return Object.entries(serviceCounts)
+      .map(([name, total]) => ({ name, total }))
+      .filter(item => item.total > 0) // Only show services with distributions
+      .sort((a,b) => b.total - a.total); // Sort by total
   }, [services, distributions]);
 
   if (isLoading) {
@@ -165,16 +169,31 @@ export default function DashboardPage() {
             Quantité totale de médicaments distribués par service.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={{}} className="h-[300px] w-full">
-            <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-              <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-35} textAnchor="end" height={60} />
-              <YAxis />
-              <Tooltip cursor={{ fill: 'hsl(var(--accent))', radius: 'var(--radius)' }} content={<ChartTooltipContent />} />
-              <Bar dataKey="total" fill="hsl(var(--primary))" radius={4} />
-            </BarChart>
-          </ChartContainer>
+        <CardContent className="pl-2 pr-6">
+           {/* Desktop Chart */}
+          <div className="hidden h-[300px] w-full sm:block">
+            <ChartContainer config={{}} className="h-full w-full">
+              <BarChart data={distributionByService} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} angle={-35} textAnchor="end" height={60} interval={0} />
+                <YAxis />
+                <Tooltip cursor={{ fill: 'hsl(var(--accent))', radius: 'var(--radius)' }} content={<ChartTooltipContent />} />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </div>
+          {/* Mobile Chart */}
+          <div className="h-[400px] w-full sm:hidden">
+            <ChartContainer config={{}} className="h-full w-full">
+                <BarChart data={distributionByService} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={80} interval={0} />
+                    <Tooltip cursor={{ fill: 'hsl(var(--accent))', radius: 'var(--radius)' }} content={<ChartTooltipContent />} />
+                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={4} />
+                </BarChart>
+            </ChartContainer>
+          </div>
         </CardContent>
       </Card>
     </div>
