@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import {
   Card,
   CardContent,
@@ -8,14 +8,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -56,14 +48,7 @@ function DashboardSkeleton() {
                 <CardDescription>Les plus distribués</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex justify-between gap-4">
-                            <Skeleton className="h-5 w-3/5" />
-                            <Skeleton className="h-5 w-1/5" />
-                        </div>
-                    ))}
-                </div>
+                <Skeleton className="w-full h-[250px]" />
             </CardContent>
         </Card>
       </div>
@@ -147,6 +132,14 @@ export default function DashboardPage() {
         .sort((a, b) => b.total - a.total)
         .slice(0, 5);
   }, [distributions]);
+
+  const PASTEL_COLORS = [
+    "hsl(12, 100%, 85%)",   // Light Salmon (Warmest)
+    "hsl(30, 100%, 85%)",   // Light Orange
+    "hsl(50, 100%, 85%)",   // Light Yellow
+    "hsl(140, 80%, 85%)",  // Light Green
+    "hsl(200, 100%, 85%)",  // Light Blue (Coolest)
+  ];
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -246,26 +239,25 @@ export default function DashboardPage() {
                 <CardTitle>Top 5 des médicaments</CardTitle>
                 <CardDescription>Les plus distribués</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pl-2 pr-6">
                 {topDistributedDrugs.length > 0 ? (
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Médicament</TableHead>
-                              <TableHead className="text-right">Quantité</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {topDistributedDrugs.map((drug) => (
-                              <TableRow key={drug.name}>
-                                  <TableCell className="font-medium p-2">{drug.name}</TableCell>
-                                  <TableCell className="text-right p-2">{drug.total}</TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
+                  <div className="h-[250px] w-full">
+                    <ChartContainer config={{}} className="h-full w-full">
+                        <BarChart data={topDistributedDrugs} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
+                            <XAxis type="number" />
+                            <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} interval={0} tick={{ fontSize: 12 }}/>
+                            <Tooltip cursor={{ fill: 'hsl(var(--accent))', radius: 'var(--radius)' }} content={<ChartTooltipContent />} />
+                            <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+                                {topDistributedDrugs.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={PASTEL_COLORS[index % PASTEL_COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ChartContainer>
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                  <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
                     Aucune donnée de distribution pour le moment.
                   </div>
                 )}
