@@ -27,6 +27,7 @@ export default function SettingsPage() {
 
     const handleSaveChanges = () => {
         toast({
+            variant: "success",
             title: "Paramètres enregistrés",
             description: "Vos modifications ont été enregistrées avec succès.",
         });
@@ -42,6 +43,7 @@ export default function SettingsPage() {
             
             setNewService('');
             toast({
+                variant: "success",
                 title: "Service ajouté",
                 description: `"${newService}" a été ajouté.`
             });
@@ -64,6 +66,7 @@ export default function SettingsPage() {
             await deleteDoc(serviceDoc);
             toast({
                 title: "Service supprimé",
+                description: `Le service "${serviceName}" a été supprimé.`,
                 variant: "default",
             });
         } catch (error) {

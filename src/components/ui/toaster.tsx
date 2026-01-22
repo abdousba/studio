@@ -9,6 +9,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+import { CheckCircle2, XCircle } from "lucide-react"
 
 export function Toaster() {
   const { toasts } = useToast()
@@ -16,13 +17,23 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
+        const icon =
+          props.variant === 'destructive' ? (
+            <XCircle className="h-6 w-6" />
+          ) : props.variant === 'success' ? (
+            <CheckCircle2 className="h-6 w-6" />
+          ) : null;
+
         return (
           <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
+            <div className="flex items-start gap-4">
+              {icon}
+              <div className="grid gap-1">
+                {title && <ToastTitle>{title}</ToastTitle>}
+                {description && (
+                  <ToastDescription>{description}</ToastDescription>
+                )}
+              </div>
             </div>
             {action}
             <ToastClose />

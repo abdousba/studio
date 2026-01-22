@@ -26,6 +26,7 @@ import type { Drug, Service, Distribution } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, updateDoc, collection, addDoc, runTransaction, query, orderBy, limit } from 'firebase/firestore';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 
 type Mode = 'selection' | 'pch' | 'distribution';
@@ -51,6 +52,8 @@ type DistributionFormValues = z.infer<typeof distributionFormSchema>;
 
 export default function ScanClientPage() {
     const { firestore, user, isUserLoading } = useFirebase();
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
     const drugsQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'drugs') : null, [firestore, isUserLoading]);
     const { data: drugs, isLoading: drugsLoading } = useCollection<Drug>(drugsQuery);
@@ -86,6 +89,15 @@ export default function ScanClientPage() {
         defaultValues: { barcode: '', lotId: '', quantity: 1, service: '' },
     });
     
+    useEffect(() => {
+      const action = searchParams.get('action');
+      if (action === 'pch') {
+        setMode('pch');
+        // Optional: clear the URL parameter
+        router.replace('/scan', { scroll: false });
+      }
+    }, [searchParams, router]);
+
     const isLoading = drugsLoading || servicesLoading || isUserLoading || distributionsLoading;
 
     // PCH form logic
@@ -211,7 +223,7 @@ export default function ScanClientPage() {
                     }
                     
                     audioRef.current?.play();
-                    toast({ title: "Code-barres scanné!", description: `Code: ${barcodeValue}` });
+                    toast({ variant: "success", title: "Code-barres scanné!", description: `Code: ${barcodeValue}` });
                     stopScan();
                     }
                 } catch (detectError) {
@@ -272,6 +284,7 @@ export default function ScanClientPage() {
                         lotNumber: values.lotNumber
                     });
                      toast({
+                        variant: "success",
                         title: 'Stock mis à jour',
                         description: `Le stock de ${values.designation} est maintenant de ${newStock}.`,
                     });
@@ -287,6 +300,7 @@ export default function ScanClientPage() {
                     };
                     transaction.set(drugRef, newDrug);
                     toast({
+                        variant: "success",
                         title: 'Nouveau médicament enregistré',
                         description: `${values.designation} a été ajouté à la base de données avec un stock de ${values.quantity}.`,
                     });
@@ -351,6 +365,7 @@ export default function ScanClientPage() {
             });
 
             toast({
+                variant: "success",
                 title: 'Distribution réussie',
                 description: `${values.quantity} unités de ${lotToDistribute.designation} (Lot: ${lotToDistribute.lotNumber}) distribuées.`,
             });
@@ -376,18 +391,27 @@ export default function ScanClientPage() {
         }}>
             <Minus className="h-6 w-6" />
         </Button>
-        <Input
-            type="number"
-            className="w-24 text-center text-4xl font-bold border-0 bg-transparent shadow-none focus-visible:ring-0 p-0 h-auto"
-            {...form.register(fieldName, {
-                valueAsNumber: true,
-                onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+        <FormField
+          control={form.control}
+          name={fieldName}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Input
+                  type="number"
+                  className="w-24 text-center text-4xl font-bold border-0 bg-transparent shadow-none focus-visible:ring-0 p-0 h-auto"
+                  {...field}
+                  onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)}
+                  onBlur={(e) => {
                     const value = e.target.value;
                     if (value === '' || parseInt(value, 10) < 1) {
-                        form.setValue(fieldName, 1, { shouldValidate: true });
+                      form.setValue(fieldName, 1, { shouldValidate: true });
                     }
-                }
-            })}
+                  }}
+                />
+              </FormControl>
+            </FormItem>
+          )}
         />
         <Button type="button" variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => {
              const currentValue = form.getValues(fieldName);

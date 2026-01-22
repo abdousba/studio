@@ -192,6 +192,7 @@ function InventoryPageComponent() {
               lowStockThreshold: values.lowStockThreshold,
           });
           toast({
+              variant: "success",
               title: "Médicament mis à jour",
               description: "Les informations du médicament ont été enregistrées.",
           });
@@ -262,6 +263,7 @@ function InventoryPageComponent() {
     }
     
     toast({
+        variant: "success",
         title: "Exportation réussie",
         description: `Le fichier CSV de la vue "${activeFilter}" a été téléchargé.`,
     });
