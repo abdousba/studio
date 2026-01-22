@@ -39,6 +39,16 @@
         "category": {
           "type": "string",
           "description": "Category of the drug (e.g., Antibiotic, Analgesic)."
+        },
+        "createdAt": {
+            "type": "string",
+            "description": "The date when the drug was first added to the inventory.",
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": "string",
+            "description": "The date when the drug was last updated.",
+            "format": "date-time"
         }
       },
       "required": [

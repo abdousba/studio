@@ -8,6 +8,8 @@ export type Drug = {
   lowStockThreshold: number;
   lotNumber?: string;
   category?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Service = {

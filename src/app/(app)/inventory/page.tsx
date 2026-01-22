@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon } from "lucide-react";
 import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
@@ -50,6 +50,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 
 type DrugStatus = {
@@ -124,6 +127,10 @@ function InventoryPageComponent() {
     category: '',
     minQty: '',
     maxQty: '',
+    dateAddedFrom: undefined as Date | undefined,
+    dateAddedTo: undefined as Date | undefined,
+    dateUpdatedFrom: undefined as Date | undefined,
+    dateUpdatedTo: undefined as Date | undefined,
   });
 
   const handleFilterChange = (value: string) => {
@@ -136,12 +143,20 @@ function InventoryPageComponent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handleAdvancedFilterChange = (key: keyof typeof advancedFilters, value: string) => {
+  const handleAdvancedFilterChange = (key: keyof typeof advancedFilters, value: string | Date | undefined) => {
     setAdvancedFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetAdvancedFilters = () => {
-    setAdvancedFilters({ category: '', minQty: '', maxQty: '' });
+    setAdvancedFilters({
+      category: '',
+      minQty: '',
+      maxQty: '',
+      dateAddedFrom: undefined,
+      dateAddedTo: undefined,
+      dateUpdatedFrom: undefined,
+      dateUpdatedTo: undefined,
+    });
     setShowAdvancedFilters(false);
   };
   
@@ -218,6 +233,28 @@ function InventoryPageComponent() {
         finalResults = finalResults.filter(d => d.currentStock <= max);
       }
     }
+
+    // Date filters
+    if (advancedFilters.dateAddedFrom) {
+        const fromDate = new Date(advancedFilters.dateAddedFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) >= fromDate);
+    }
+    if (advancedFilters.dateAddedTo) {
+        const toDate = new Date(advancedFilters.dateAddedTo);
+        toDate.setHours(23, 59, 59, 999);
+        finalResults = finalResults.filter(d => d.createdAt && new Date(d.createdAt) <= toDate);
+    }
+    if (advancedFilters.dateUpdatedFrom) {
+        const fromDate = new Date(advancedFilters.dateUpdatedFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) >= fromDate);
+    }
+    if (advancedFilters.dateUpdatedTo) {
+        const toDate = new Date(advancedFilters.dateUpdatedTo);
+        toDate.setHours(23, 59, 59, 999);
+        finalResults = finalResults.filter(d => d.updatedAt && new Date(d.updatedAt) <= toDate);
+    }
     
     return finalResults;
   }, [drugs, activeFilter, advancedFilters]);
@@ -269,6 +306,7 @@ function InventoryPageComponent() {
               designation: values.designation,
               lowStockThreshold: values.lowStockThreshold,
               category: values.category || '',
+              updatedAt: new Date().toISOString(),
           });
           toast({
               variant: "success",
@@ -445,23 +483,78 @@ function InventoryPageComponent() {
                       </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right col-span-4 text-center">Quantité</Label>
+                      <Label className="text-right">Quantité</Label>
                       <Input
                         id="min-qty"
                         type="number"
                         placeholder="Min"
-                        className="col-span-2"
+                        className="col-span-1"
                         value={advancedFilters.minQty}
                         onChange={(e) => handleAdvancedFilterChange('minQty', e.target.value)}
                       />
+                       <span className="text-center text-muted-foreground">-</span>
                       <Input
                         id="max-qty"
                         type="number"
                         placeholder="Max"
-                        className="col-span-2"
+                        className="col-span-1"
                         value={advancedFilters.maxQty}
                         onChange={(e) => handleAdvancedFilterChange('maxQty', e.target.value)}
                       />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Date d'ajout</Label>
+                        <div className="col-span-3 grid grid-cols-2 gap-2">
+                           <Popover>
+                              <PopoverTrigger asChild>
+                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateAddedFrom && "text-muted-foreground")}>
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {advancedFilters.dateAddedFrom ? format(advancedFilters.dateAddedFrom, 'dd/MM/yy') : <span>Début</span>}
+                                  </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                  <Calendar mode="single" selected={advancedFilters.dateAddedFrom} onSelect={(date) => handleAdvancedFilterChange('dateAddedFrom', date)} initialFocus />
+                              </PopoverContent>
+                          </Popover>
+                          <Popover>
+                              <PopoverTrigger asChild>
+                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateAddedTo && "text-muted-foreground")}>
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {advancedFilters.dateAddedTo ? format(advancedFilters.dateAddedTo, 'dd/MM/yy') : <span>Fin</span>}
+                                  </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                  <Calendar mode="single" selected={advancedFilters.dateAddedTo} onSelect={(date) => handleAdvancedFilterChange('dateAddedTo', date)} initialFocus />
+                              </PopoverContent>
+                          </Popover>
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Date de MàJ</Label>
+                        <div className="col-span-3 grid grid-cols-2 gap-2">
+                           <Popover>
+                              <PopoverTrigger asChild>
+                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateUpdatedFrom && "text-muted-foreground")}>
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {advancedFilters.dateUpdatedFrom ? format(advancedFilters.dateUpdatedFrom, 'dd/MM/yy') : <span>Début</span>}
+                                  </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                  <Calendar mode="single" selected={advancedFilters.dateUpdatedFrom} onSelect={(date) => handleAdvancedFilterChange('dateUpdatedFrom', date)} initialFocus />
+                              </PopoverContent>
+                          </Popover>
+                          <Popover>
+                              <PopoverTrigger asChild>
+                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !advancedFilters.dateUpdatedTo && "text-muted-foreground")}>
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {advancedFilters.dateUpdatedTo ? format(advancedFilters.dateUpdatedTo, 'dd/MM/yy') : <span>Fin</span>}
+                                  </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                  <Calendar mode="single" selected={advancedFilters.dateUpdatedTo} onSelect={(date) => handleAdvancedFilterChange('dateUpdatedTo', date)} initialFocus />
+                              </PopoverContent>
+                          </Popover>
+                        </div>
                     </div>
                   </div>
                   <SheetFooter>

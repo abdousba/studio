@@ -278,6 +278,7 @@ export default function ScanClientPage() {
             await runTransaction(firestore, async (transaction) => {
                 const drugDoc = await transaction.get(drugRef);
                 const expiryDateString = format(values.expiryDate, 'yyyy-MM-dd');
+                const now = new Date().toISOString();
 
                 if (drugDoc.exists()) {
                     const currentStock = drugDoc.data().currentStock || 0;
@@ -288,6 +289,7 @@ export default function ScanClientPage() {
                         expiryDate: expiryDateString,
                         lotNumber: values.lotNumber,
                         category: values.category || '',
+                        updatedAt: now,
                     });
                      toast({
                         variant: "success",
@@ -304,6 +306,8 @@ export default function ScanClientPage() {
                         lowStockThreshold: 10, // Default value
                         lotNumber: values.lotNumber,
                         category: values.category || '',
+                        createdAt: now,
+                        updatedAt: now,
                     };
                     transaction.set(drugRef, newDrug);
                     toast({
@@ -356,7 +360,10 @@ export default function ScanClientPage() {
                 const newStock = drugDoc.data().currentStock - values.quantity;
                 if (newStock < 0) throw new Error("Stock insuffisant pendant la transaction.");
 
-                transaction.update(drugRef, { currentStock: newStock });
+                transaction.update(drugRef, { 
+                    currentStock: newStock,
+                    updatedAt: new Date().toISOString(),
+                });
 
                 const distColRef = collection(firestore, 'distributions');
                 transaction.set(doc(distColRef), {
