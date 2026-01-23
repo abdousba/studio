@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon } from "lucide-react";
-import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
+import { collection, query, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -112,7 +112,7 @@ function InventoryPageComponent() {
   const { firestore, isUserLoading } = useFirebase();
   const drugsQuery = useMemoFirebase(() => {
     if (!firestore || isUserLoading) return null;
-    return query(collection(firestore, 'drugs'), orderBy('designation', 'asc'));
+    return query(collection(firestore, 'drugs'));
   }, [firestore, isUserLoading]);
   const { data: drugs, isLoading: drugsAreLoading } = useCollection<Drug>(drugsQuery);
 
@@ -124,6 +124,7 @@ function InventoryPageComponent() {
   
   const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement>(null);
   
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
     category: '',
@@ -307,8 +308,16 @@ function InventoryPageComponent() {
         });
     }
 
+    finalResults.sort((a, b) => {
+        if (sortOrder === 'asc') {
+            return a.designation.localeCompare(b.designation);
+        } else {
+            return b.designation.localeCompare(a.designation);
+        }
+    });
+
     return finalResults;
-  }, [drugs, activeFilter, advancedFilters]);
+  }, [drugs, activeFilter, advancedFilters, sortOrder]);
 
 
   useEffect(() => {
@@ -590,7 +599,7 @@ function InventoryPageComponent() {
                         <div className="col-span-3 grid grid-cols-2 gap-2">
                             <div className="relative">
                                 <Input
-                                    placeholder="Début (JJ/MM/AAAA)"
+                                    placeholder="JJ/MM/AAAA"
                                     value={advancedFilters.dateAddedFrom}
                                     onChange={(e) => handleAdvancedFilterChange('dateAddedFrom', e.target.value)}
                                 />
@@ -645,6 +654,10 @@ function InventoryPageComponent() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-4">
+            <Button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} variant="outline" size="sm">
+                {sortOrder === 'asc' ? <ArrowDownAZ className="mr-2 h-4 w-4" /> : <ArrowUpAZ className="mr-2 h-4 w-4" />}
+                Ordre
+            </Button>
             <Button onClick={() => handleFilterChange('all')} variant={activeFilter === 'all' ? 'default' : 'secondary'} size="sm">Tout</Button>
             <Button onClick={() => handleFilterChange('en_stock')} variant={activeFilter === 'en_stock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'en_stock' && 'bg-green-500 hover:bg-green-600 text-white')}>En Stock</Button>
             <Button onClick={() => handleFilterChange('low_stock')} variant={activeFilter === 'low_stock' ? 'default' : 'secondary'} size="sm" className={cn(activeFilter === 'low_stock' && 'bg-yellow-500 hover:bg-yellow-600 text-white')}>Stock Faible</Button>

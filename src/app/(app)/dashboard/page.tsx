@@ -148,17 +148,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 md:space-y-8">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="p-3 pb-2">
-            <CardTitle className="text-sm font-medium">Lots de médicaments</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-2">
-            <div className="text-2xl font-bold">{totalDrugs}</div>
-            <p className="text-xs text-muted-foreground">
-              Lots de médicaments uniques
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/inventory">
+          <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
+            <CardHeader className="p-3 pb-2">
+              <CardTitle className="text-sm font-medium">Lots de médicaments</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-2">
+              <div className="text-2xl font-bold">{totalDrugs}</div>
+              <p className="text-xs text-muted-foreground">
+                Lots de médicaments uniques
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/inventory?filter=low_stock">
           <Card className="hover:border-primary/80 hover:bg-muted transition-colors cursor-pointer">
             <CardHeader className="p-3 pb-2">
