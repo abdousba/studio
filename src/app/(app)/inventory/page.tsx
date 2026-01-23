@@ -207,6 +207,9 @@ function InventoryPageComponent() {
 
     // 1. Apply main button filter (from URL)
     switch (activeFilter) {
+      case 'all':
+        intermediateResults = drugs;
+        break;
       case 'en_stock':
         intermediateResults = drugs.filter(isEnStock);
         break;
