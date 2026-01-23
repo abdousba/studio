@@ -9,9 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
-import type { Service } from "@/lib/types";
+import type { Service, Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { drugSeedData } from "@/lib/seed-data";
 
 
 export default function SettingsPage() {
@@ -24,6 +25,7 @@ export default function SettingsPage() {
     
     const [newService, setNewService] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSeeding, setIsSeeding] = useState(false);
 
     const handleSaveChanges = () => {
         toast({
@@ -74,6 +76,59 @@ export default function SettingsPage() {
             toast({ title: "Erreur", description: "Impossible de supprimer le service.", variant: "destructive"});
         }
     }
+
+    const handleSeedData = async () => {
+        if (!firestore) return;
+        const confirmation = confirm("Êtes-vous sûr de vouloir ajouter la liste de médicaments initiale ? Cette action peut écraser des données existantes si les codes-barres sont identiques.");
+        if (!confirmation) return;
+
+        setIsSeeding(true);
+        try {
+            const batch = writeBatch(firestore);
+            const now = new Date().toISOString();
+
+            const slugify = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/--+/g, '-').replace(/^-+|-+$/g, '');
+
+            drugSeedData.forEach((seed) => {
+                const barcode = slugify(seed.designation);
+                if (!barcode) return;
+
+                const drugRef = doc(firestore, 'drugs', barcode);
+                const newDrug: Omit<Drug, 'id'> = {
+                    barcode: barcode,
+                    designation: seed.designation,
+                    category: seed.category,
+                    initialStock: 100,
+                    currentStock: 100,
+                    lowStockThreshold: 10,
+                    expiryDate: '2028-12-31',
+                    lotNumber: `SEED-${Math.floor(Math.random() * 90000) + 10000}`,
+                    conditionnement: 'Cacheté',
+                    createdAt: now,
+                    updatedAt: now,
+                };
+                batch.set(drugRef, newDrug);
+            });
+
+            await batch.commit();
+
+            toast({
+                variant: 'success',
+                title: 'Données initialisées',
+                description: `${drugSeedData.length} médicaments ont été ajoutés à la base de données.`,
+            });
+        } catch (error) {
+            console.error("Error seeding data:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erreur d\'initialisation',
+                description: 'Une erreur est survenue lors de l\'ajout des médicaments.',
+            });
+        } finally {
+            setIsSeeding(false);
+        }
+    };
+
 
     return (
         <div className="space-y-6">
@@ -144,6 +199,25 @@ export default function SettingsPage() {
                         <Button onClick={handleAddService} disabled={isSubmitting || isUserLoading} className="w-full sm:w-auto">
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Ajouter un service
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Gestion des données</CardTitle>
+                    <CardDescription>Actions d'administration pour la base de données.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label htmlFor="seed-data">Initialiser la base de données</Label>
+                            <p className="text-sm text-muted-foreground">Ajoute une liste prédéfinie de médicaments. Attention, cette action peut écraser des données existantes si les codes-barres sont identiques.</p>
+                        </div>
+                        <Button onClick={handleSeedData} disabled={isSeeding || isUserLoading} variant="destructive">
+                            {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Initialiser les données
                         </Button>
                     </div>
                 </CardContent>
