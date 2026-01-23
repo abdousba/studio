@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon, ArrowDownAZ, ArrowUpAZ, ArrowLeft, ArrowRight } from "lucide-react";
 import { collection, query, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
@@ -136,6 +136,10 @@ function InventoryPageComponent() {
     dateUpdatedTo: '',
     rotation: '',
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
 
   const handleFilterChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -319,6 +323,17 @@ function InventoryPageComponent() {
     return finalResults;
   }, [drugs, activeFilter, advancedFilters, sortOrder]);
 
+  const totalPages = useMemo(() => {
+    if (!filteredDrugs) return 0;
+    return Math.ceil(filteredDrugs.length / itemsPerPage);
+  }, [filteredDrugs]);
+  
+  const paginatedDrugs = useMemo(() => {
+    if (!filteredDrugs) return [];
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredDrugs.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredDrugs, currentPage]);
+
 
   useEffect(() => {
     if (highlightedDrugId && highlightedRowRef.current) {
@@ -334,7 +349,11 @@ function InventoryPageComponent() {
         }, 3000); // 3 second highlight
         return () => clearTimeout(timer);
     }
-  }, [highlightedDrugId, filteredDrugs, pathname, router, searchParams]);
+  }, [highlightedDrugId, paginatedDrugs, pathname, router, searchParams]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredDrugs]);
 
 
   const isLoading = drugsAreLoading || isUserLoading;
@@ -506,7 +525,12 @@ function InventoryPageComponent() {
 
 
   return (
-    <Card>
+    <Card className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      )}
       <CardHeader>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -685,14 +709,7 @@ function InventoryPageComponent() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {isLoading && (
-                <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-                    </TableCell>
-                </TableRow>
-                )}
-                {!isLoading && filteredDrugs?.map((drug) => {
+                {paginatedDrugs.map((drug) => {
                 const statuses = getStockStatuses(drug);
                 const isExpired = statuses.some(s => s.label === 'Expiré');
                 const isHighlighted = drug.id === highlightedDrugId;
@@ -754,12 +771,7 @@ function InventoryPageComponent() {
 
         {/* Mobile view */}
         <Accordion type="single" collapsible className="space-y-3 sm:hidden" ref={highlightedDrugId ? highlightedRowRef as React.Ref<HTMLDivElement> : null}>
-             {isLoading && (
-                <div className="col-span-2 flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            )}
-            {!isLoading && filteredDrugs?.map((drug) => {
+            {paginatedDrugs.map((drug) => {
                 const statuses = getStockStatuses(drug);
                 const isExpired = statuses.some(s => s.label === 'Expiré');
                 const isHighlighted = drug.id === highlightedDrugId;
@@ -822,6 +834,31 @@ function InventoryPageComponent() {
                 </div>
             )}
         </Accordion>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 pt-8 md:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => p - 1)}
+              disabled={currentPage === 1}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Précédent
+            </Button>
+            <span className="text-sm font-medium">
+              Page {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </CardContent>
        {editingDrug && (
           <Dialog open={!!editingDrug} onOpenChange={(isOpen) => !isOpen && setEditingDrug(null)}>
