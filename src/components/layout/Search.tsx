@@ -38,7 +38,7 @@ export function Search() {
     setResults([]);
     setIsPopoverOpen(false);
     inputRef.current?.blur();
-    router.push(`/inventory?highlight=${drugId}`);
+    router.push(`/inventory?view=${drugId}&highlight=${drugId}`);
   };
   
   return (

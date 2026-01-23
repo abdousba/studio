@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { Drug } from "@/lib/types";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon, ArrowDownAZ, ArrowUpAZ, ArrowLeft, ArrowRight } from "lucide-react";
+import { Loader2, CalendarX, Pencil, Download, AlertTriangle, CalendarClock, FileText, Filter, Calendar as CalendarIcon, ArrowDownAZ, ArrowUpAZ, ArrowLeft, ArrowRight, Package, Barcode, Hash, Clock, Tag, PackageOpen, Info } from "lucide-react";
 import { collection, query, doc, updateDoc } from 'firebase/firestore';
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
@@ -53,6 +53,7 @@ import autoTable from 'jspdf-autotable';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DRUG_CATEGORIES } from "@/lib/categories";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 
 
 type DrugStatus = {
@@ -121,6 +122,7 @@ function InventoryPageComponent() {
   const searchParams = useSearchParams();
   const activeFilter = searchParams.get('filter') || 'all';
   const highlightedDrugId = searchParams.get('highlight');
+  const viewDrugId = searchParams.get('view');
   
   const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement>(null);
   
@@ -139,6 +141,7 @@ function InventoryPageComponent() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+  const [viewingDrug, setViewingDrug] = useState<Drug | null>(null);
 
 
   const handleFilterChange = (value: string) => {
@@ -356,7 +359,31 @@ function InventoryPageComponent() {
   
   useEffect(() => {
     setCurrentPage(1);
-  }, [filteredDrugs]);
+  }, [activeFilter, advancedFilters]);
+
+  // This effect handles opening the detail view and navigating to the correct page
+  useEffect(() => {
+    if (viewDrugId && drugs && filteredDrugs) {
+        const drugToView = drugs.find(d => d.id === viewDrugId);
+        if (drugToView) {
+            setViewingDrug(drugToView);
+            
+            // Find the page for this drug in the currently filtered list
+            const drugIndex = filteredDrugs.findIndex(d => d.id === viewDrugId);
+            if (drugIndex > -1) {
+                const pageNumber = Math.ceil((drugIndex + 1) / itemsPerPage);
+                if (currentPage !== pageNumber) {
+                    setCurrentPage(pageNumber);
+                }
+            }
+        } else {
+            // If drug not found (e.g. bad URL), remove the param
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('view');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    }
+  }, [viewDrugId, drugs, filteredDrugs, itemsPerPage, currentPage, router, pathname, searchParams]);
 
 
   const isLoading = drugsAreLoading || isUserLoading;
@@ -525,6 +552,23 @@ function InventoryPageComponent() {
         description: `Le fichier PDF de la vue "${activeFilter}" a été téléchargé.`,
     });
   };
+  
+  const handleCloseViewDialog = () => {
+    setViewingDrug(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('view');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+  
+  const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+    <div className="flex items-start gap-3 rounded-md bg-muted/50 p-3">
+        <Icon className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+        <div>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="font-semibold">{String(value)}</p>
+        </div>
+    </div>
+  );
 
 
   return (
@@ -976,6 +1020,67 @@ function InventoryPageComponent() {
                           </DialogFooter>
                       </form>
                   </Form>
+              </DialogContent>
+          </Dialog>
+      )}
+      {viewingDrug && (
+          <Dialog open={!!viewingDrug} onOpenChange={(isOpen) => !isOpen && handleCloseViewDialog()}>
+              <DialogContent className="sm:max-w-2xl">
+                  <DialogHeader>
+                      <DialogTitle className="flex items-center gap-3">
+                          <Package className="h-7 w-7 text-primary" />
+                          <span className="text-2xl">{viewingDrug.designation}</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                          Détails complets du lot <span className="font-semibold">{viewingDrug.lotNumber || 'N/A'}</span>.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <DetailItem icon={Barcode} label="Code-barres (ID)" value={viewingDrug.id} />
+                      <DetailItem icon={Tag} label="Catégorie" value={viewingDrug.category || 'Non classé'} />
+                      <DetailItem icon={PackageOpen} label="Conditionnement" value={viewingDrug.conditionnement || 'Cacheté'} />
+                      <div className="md:col-span-2">
+                          <DetailItem icon={Info} label="Statuts" value={
+                              <div className="flex flex-wrap gap-2">
+                                  {getStockStatuses(viewingDrug).map((status) => (
+                                      <Badge key={status.label} variant={status.variant as any} className={cn(
+                                          'flex items-center',
+                                          status.variant === 'success' && 'border-transparent bg-green-100 text-green-800 hover:bg-green-100/80',
+                                          status.variant === 'secondary' && 'border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80',
+                                          status.variant === 'outline' && 'border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100/80',
+                                          status.variant === 'destructive' && 'border-transparent bg-red-100 text-red-800 hover:bg-red-100/80',
+                                          status.variant === 'warning' && 'border-transparent bg-purple-100 text-purple-800 hover:bg-purple-100/80',
+                                          status.variant === 'info' && 'border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80'
+                                      )}>
+                                          {status.icon && <status.icon className="mr-1 h-3 w-3" />}
+                                          {status.label}
+                                      </Badge>
+                                  ))}
+                              </div>
+                          } />
+                      </div>
+
+                      <Separator className="my-2 md:col-span-2" />
+
+                      <DetailItem icon={Hash} label="Stock Actuel" value={viewingDrug.currentStock} />
+                      <DetailItem icon={AlertTriangle} label="Seuil de stock faible" value={viewingDrug.lowStockThreshold} />
+                      <DetailItem icon={Hash} label="Stock Initial" value={viewingDrug.initialStock ?? 'N/A'} />
+                      <DetailItem icon={CalendarIcon} label="Date d'expiration" value={viewingDrug.expiryDate} />
+                      
+                      <Separator className="my-2 md:col-span-2" />
+
+                      <DetailItem icon={Clock} label="Date d'ajout" value={viewingDrug.createdAt ? new Date(viewingDrug.createdAt).toLocaleString('fr-FR') : 'N/A'} />
+                      <DetailItem icon={Clock} label="Dernière mise à jour" value={viewingDrug.updatedAt ? new Date(viewingDrug.updatedAt).toLocaleString('fr-FR') : 'N/A'} />
+                  </div>
+                  <DialogFooter>
+                      <Button variant="outline" onClick={() => {
+                          handleCloseViewDialog();
+                          setEditingDrug(viewingDrug);
+                      }}>
+                          <Pencil className="mr-2 h-4 w-4" /> Modifier
+                      </Button>
+                      <Button onClick={handleCloseViewDialog}>Fermer</Button>
+                  </DialogFooter>
               </DialogContent>
           </Dialog>
       )}
